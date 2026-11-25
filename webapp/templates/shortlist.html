@@ -1,0 +1,74 @@
+{% extends "base.html" %}
+{% from "_icons.html" import icon %}
+{% block title %}Candidate shortlist{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <div class="crumb">Run {{ summary.created }} · {{ 'live Materials Project' if summary.source=='live' else 'bundled snapshot' }}{% if summary.run_by %} · by @{{ summary.run_by }}{% endif %}</div>
+    <h1>Candidate shortlist</h1>
+    <p class="lede"><b>{{ summary.n_scored }}</b> materials passed: {{ summary.criteria_text|join(' · ') }}. Ranked by <b>{{ RANK_LABELS[model] }}</b>.</p>
+  </div>
+  <div class="actions">
+    <a class="btn" href="{{ url_for('run_pdf', run_id=run.run_id) }}">{{ icon('pdf') }}PDF report</a>
+    <a class="btn quiet" href="{{ url_for('run_csv', run_id=run.run_id) }}">{{ icon('download') }}CSV</a>
+    <a class="btn quiet" href="{{ url_for('rejected', run_id=run.run_id) }}">{{ icon('x') }}Rejection log</a>
+  </div>
+</div>
+{% if run.stats.note %}<p class="note info" style="margin-bottom:16px">{{ run.stats.note }}</p>{% endif %}
+
+<div class="panel" style="padding:16px 20px;margin-bottom:16px">
+  <form class="inline" method="get" id="filters">
+    <div class="field" style="min-width:270px;flex:1"><label for="model">Rank by</label>
+      <select id="model" name="model" onchange="this.form.submit()">
+        {% for k,v in RANK_LABELS.items() %}<option value="{{ k }}" {% if k==model %}selected{% endif %}>{{ v }}</option>{% endfor %}
+      </select></div>
+    <div class="field" style="min-width:180px"><label for="family">Chemistry</label>
+      <select id="family" name="family" onchange="this.form.submit()"><option value="">All families</option>
+        {% for k,n in fam_counts.items() %}<option value="{{ k }}" {% if k==fam %}selected{% endif %}>{{ FAMILY_LABELS[k] }} ({{ n }})</option>{% endfor %}</select></div>
+    <div class="field" style="min-width:200px"><label for="q">Find</label><input id="q" type="search" name="q" value="{{ q }}" placeholder="Formula or MP ID"></div>
+    <div class="field"><label>&nbsp;</label><button class="btn quiet">{{ icon('search') }}Apply</button></div>
+    <div style="flex-basis:100%;display:flex;gap:18px;flex-wrap:wrap">
+      <label class="check"><input type="checkbox" name="domain" value="in" {% if domain=='in' %}checked{% endif %} onchange="this.form.submit()"> Inside training domain</label>
+      <label class="check"><input type="checkbox" name="struct" value="1" {% if struct_only %}checked{% endif %} onchange="this.form.submit()"> Has crystal structure</label>
+      <label class="check"><input type="checkbox" name="no_risk" value="1" {% if no_risk %}checked{% endif %} onchange="this.form.submit()"> Hide supply-risk elements</label>
+      <label class="check"><input type="checkbox" name="no_tox" value="1" {% if no_tox %}checked{% endif %} onchange="this.form.submit()"> Hide toxic elements</label>
+    </div>
+    <input type="hidden" name="limit" value="{{ limit }}">
+  </form>
+</div>
+
+<p class="muted" style="margin:0 0 10px">{{ n_rows }} match · showing {{ [limit, n_rows]|min }} · tick up to 4 to compare</p>
+<div class="table-wrap">
+<table>
+  <thead><tr><th></th><th class="n">#</th><th>Material</th><th>Family</th><th>CrystalScout Score</th><th class="n">Predicted <span style="text-transform:none">σ</span> (S/cm)</th><th>Tier</th><th>P(superionic)</th><th class="n">Gap (eV)</th><th>Flags</th><th>Lab <span style="text-transform:none">σ</span> (OBELiX)</th></tr></thead>
+  <tbody>
+  {% for r in rows %}
+    {% set t = tier(r.log10_sigma_pred) %}
+    <tr>
+      <td><input type="checkbox" class="cmp" value="{{ r.material_id }}" aria-label="Compare {{ r.formula }}"></td>
+      <td class="n muted">{{ r.view_rank }}</td>
+      <td><a class="mat" href="{{ url_for('material', mp_id=r.material_id, run=run.run_id) }}">{{ r.formula|formula|safe }}</a><br><small class="muted">{{ r.material_id }}{% if r.space_group %} · {{ r.space_group }}{% endif %}</small></td>
+      <td><span class="tag">{{ FAMILY_LABELS[r.family] }}</span></td>
+      <td><span class="prob"><i style="--p:{{ (r.cs_score*100)|round(1) }}%"></i><b class="num">{{ (r.cs_score*100)|round(0)|int }}</b></span></td>
+      <td class="n num" data-tip="80 % range {{ r.log10_sigma_lo|slog|striptags }} – {{ r.log10_sigma_hi|slog|striptags }}">{{ r.log10_sigma_pred|slog|safe }}</td>
+      <td><span class="tag {{ t.tone }}">{{ t.name }}</span></td>
+      <td>{% if r.p_logreg is num %}<span class="prob teal"><i style="--p:{{ (r.p_logreg*100)|round(1) }}%"></i><span class="num">{{ r.p_logreg|f }}</span></span>{% else %}<span class="muted" data-tip="No structure offline">—</span>{% endif %}</td>
+      <td class="n">{{ r.band_gap|f(1) }}</td>
+      <td><span class="flagset">{% if r.supply_risk %}<span class="flag sr" data-tip="Supply risk: {{ r.supply_risk }}">$</span>{% endif %}{% if r.toxic %}<span class="flag tx" data-tip="Toxic: {{ r.toxic }}">☣</span>{% endif %}{% if r.moisture_sensitive %}<span class="flag ms" data-tip="Moisture-sensitive: dry-room handling">💧</span>{% endif %}{% if r.in_domain|string != 'True' and r.p_logreg is num %}<span class="flag" style="background:var(--surface-3);color:var(--muted)" data-tip="Outside training domain">?</span>{% endif %}</span></td>
+      <td>{% if r.obelix_sigma is num %}<span class="tag good">{{ r.obelix_sigma|sci|safe }}</span>{% else %}<span class="muted">not measured</span>{% endif %}</td>
+    </tr>
+  {% endfor %}
+  </tbody>
+</table>
+</div>
+{% if n_rows > limit %}<p style="margin-top:14px"><a class="btn quiet" href="{{ request.path }}?{{ request.query_string.decode()|replace('limit=' ~ limit, '') }}&limit={{ limit + 100 }}">Show 100 more</a></p>{% endif %}
+
+<details style="margin-top:22px"><summary>Older and saved runs</summary>
+  <div class="table-wrap" style="margin-top:8px"><table><thead><tr><th>Run</th><th>Created</th><th>Criteria</th><th class="n">Passed</th><th>By</th></tr></thead><tbody>
+  {% for r in runs %}<tr><td><a href="{{ url_for('shortlist', run_id=r.run_id) }}">{{ r.run_id }}</a></td><td class="muted">{{ r.created }}</td><td class="wrap">{{ r.criteria_text|join('; ') }}</td><td class="n">{{ r.n_stage_a }}</td><td class="muted">{{ r.run_by }}</td></tr>{% endfor %}
+  </tbody></table></div>
+</details>
+
+<div class="tray" id="tray" role="region" aria-label="Compare"><span><b>0</b> selected</span><button class="clear" type="button">Clear</button>
+  <a class="btn sm" data-base="{{ url_for('compare') }}" data-run="{{ run.run_id }}" href="#">{{ icon('compare') }}Compare</a></div>
+{% endblock %}

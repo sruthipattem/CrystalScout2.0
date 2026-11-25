@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+{% from "_icons.html" import icon %}
+{% from "_reality.html" import reality %}
+{% block title %}Synthesis Planner{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <p class="eyebrow">Design · Lab-ready</p>
+    <h1>Synthesis Planner <span class="tag violet" style="vertical-align:middle">NEW</span></h1>
+    <p class="lede">Turn any target formula into a solid-state recipe: which precursors to weigh, in what ratio, and how many grams for your batch.</p>
+  </div>
+  {% if plan %}<div class="actions"><button class="btn quiet" type="button" onclick="window.print()">{{ icon('pdf') }}Print lab sheet</button></div>{% endif %}
+</div>
+{% if error %}<p class="error" role="alert" style="margin-bottom:16px">{{ error }}</p>{% endif %}
+<form class="panel reveal" method="get" data-loading="Planning the synthesis…" data-steps="Assigning oxidation states|Choosing binary precursors|Balancing every element|Checking feasibility|Building the crystal structure">
+  <div class="fields" style="grid-template-columns:2fr 1fr 1fr auto">
+    <div class="field"><label for="rf">Target formula</label><input id="rf" name="formula" type="text" value="{{ formula }}" placeholder="e.g. Li6PS5Cl0.5Br0.5" required autocomplete="off" style="font-size:1.1rem;font-weight:700"></div>
+    <div class="field"><label for="rsg">Space group <small>optional</small></label><input id="rsg" name="sg" type="text" value="{{ sg or '' }}" autocomplete="off"></div>
+    <div class="field"><label for="rb">Batch size <small>grams</small></label><input id="rb" name="batch" type="number" step="0.1" min="0.1" value="{{ batch }}"></div>
+    <div class="field"><label>&nbsp;</label><button class="btn" type="submit">{{ icon('flask') }}Plan synthesis</button></div>
+  </div>
+</form>
+
+{% if plan %}
+{% if pred and pred.feasibility.key == 'unlikely' %}<p class="error" role="alert" style="margin-top:18px">{{ icon('alert') }} Careful: this composition fails a basic chemistry check ({{ pred.feasibility.reasons|join(' ') }}). The recipe balances the elements, but the product is unlikely to form.</p>{% endif %}
+<section class="grid g-side" style="margin-top:22px">
+  <div class="panel reveal">
+    <div class="panel-head"><h2>{{ plan.pretty|safe }} · {{ batch }} g batch</h2>
+      {% if plan.balanced %}<span class="tag good">{{ icon('check') }} Element balance exact</span>{% else %}<span class="tag warn">Approximate balance</span>{% endif %}</div>
+    <div class="table-wrap"><table>
+      <thead><tr><th>Precursor</th><th class="n">mol / f.u.</th><th class="n">g/mol</th><th>Share</th><th class="n">Weigh out</th></tr></thead>
+      <tbody>{% for r in plan.rows %}<tr><td><b>{{ r.pretty|safe }}</b></td><td class="n">{{ r.moles_per_fu }}</td><td class="n">{{ r.molar_mass }}</td>
+        <td><span class="prob"><i style="--p:{{ r.mass_pct }}%"></i><span class="num">{{ r.mass_pct }} %</span></span></td><td class="n"><b class="num">{{ '%.4f'|format(r.grams) }} g</b></td></tr>{% endfor %}</tbody>
+    </table></div>
+    <p style="margin-top:14px"><b>Reaction</b><br><code style="font-size:.9rem">{{ plan.equation }}</code></p>
+    <p class="foot-note">Molar mass of the product: {{ plan.molar_mass }} g/mol. Precursor amounts come from a non-negative least-squares balance of every element.</p>
+  </div>
+  <div style="display:grid;gap:22px;align-content:start">
+    {% if pred %}
+    <div class="panel reveal d1">
+      <h2>Predicted performance</h2>
+      <div class="bigprob" style="margin-top:8px"><b class="grad-text">{{ pred.sigma.sigma_text.split(' S/cm')[0] }}</b><span class="muted">S/cm</span></div>
+      <p><span class="tag {{ pred.sigma.tier.tone }}">{{ pred.sigma.tier.name }}</span> <span class="muted">80 % range {{ pred.sigma.lo_text }} – {{ pred.sigma.hi_text }}</span></p>
+      {% if pred.obelix %}<p class="note ok">Measured in the lab (OBELiX {{ pred.obelix.ID }}): {{ pred.obelix.sigma|sci|safe }} S/cm.</p>{% endif %}
+      <p class="honest">{{ icon('alert') }} Screening priority, not a measured conductivity.</p>
+    </div>
+    {% endif %}
+    <div class="panel reveal d2">
+      <h2>Suggested route</h2>
+      <p>{{ plan.route }}</p>
+      {% if plan.moisture_sensitive %}<p class="note">Moisture-sensitive chemistry: weigh, mill and store under argon (H₂O &lt; 1 ppm). Sulfides can release H₂S in air.</p>{% endif %}
+      <p class="foot-note">A starting point for an experienced chemist; adjust temperatures and times to your equipment and confirm the phase by XRD.</p>
+    </div>
+  </div>
+</section>
+{% if pred %}<section class="panel reveal" style="margin-top:22px"><h2>Reality check for {{ plan.pretty|safe }}</h2>{{ reality(pred) }}</section>{% endif %}
+{% endif %}
+{% endblock %}

@@ -1,0 +1,84 @@
+{% extends "base.html" %}
+{% from "_icons.html" import icon %}
+{% block title %}Run a screen{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <p class="eyebrow">Discovery pipeline</p>
+    <h1>Run a screen</h1>
+    <p class="lede">Pick a goal, adjust the property filters, and CrystalScout filters the candidates, computes structural descriptors, predicts conductivity and ranks the survivors, usually in a few seconds.</p>
+  </div>
+</div>
+{% if error %}<p class="error" role="alert" style="margin-bottom:16px">{{ error }}</p>{% endif %}
+<form method="post" style="display:grid;gap:22px" data-loading="Screening the Materials Project…" data-steps="Loading 19,806 Li compounds|Applying stability and band-gap filters|Computing structure descriptors|Running both models|Ranking with the CrystalScout Score|Saving the run">
+  <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+  <section class="panel reveal" id="presets">
+    <div class="panel-head"><div><h2>1 · Start from an industry goal</h2><p class="muted" style="margin:2px 0 0">Presets fill the filters below. You can still edit every value.</p></div></div>
+    <div class="presets">
+      {% for p in presets %}
+      <button type="button" class="preset {% if p.key==preset %}on{% endif %} tone-{{ p.tone }}" data-gap="{{ p.gap }}" data-hull="{{ p.hull }}" data-tm="{{ 1 if p.tm else 0 }}" data-excl="{{ p.excl }}">
+        <span class="ic">{{ icon(p.icon) }}</span><b>{{ p.name }}</b><span>{{ p.text }}</span></button>
+      {% endfor %}
+    </div>
+  </section>
+
+  <section class="panel reveal d1">
+    <h2>2 · Property filters (Stage A)</h2>
+    <p class="muted">Defaults reproduce Sendek et al. 2017 without the oxidation-potential filter.</p>
+    <div class="fields" style="margin-top:12px">
+      <div class="field"><label for="bg">Band gap greater than <small>eV</small></label><input id="bg" type="number" step="0.1" min="0" max="10" name="band_gap_min" value="{{ c.band_gap_min }}"></div>
+      <div class="field"><label for="eh">Energy above hull at most <small>eV/atom · 0 = on hull</small></label><input id="eh" type="number" step="0.005" min="0" max="1" name="ehull_max" value="{{ c.ehull_max }}"></div>
+      <div class="field"><label for="ex">Exclude elements <small>space-separated</small></label><input id="ex" type="text" name="exclude_elements" placeholder="e.g. Ge Ta" value="{{ c.exclude_elements|join(' ') }}"></div>
+      <div class="field"><label for="ns">Largest cell <small>sites · 0 = no limit</small></label><input id="ns" type="number" min="0" name="max_nsites" value="{{ c.max_nsites }}"></div>
+    </div>
+    <label class="check" style="margin-top:14px"><input type="checkbox" id="tm" name="exclude_tm" {% if c.exclude_transition_metals %}checked{% endif %}> Exclude transition metals (stability against a Li-metal anode)</label>
+  </section>
+
+  <section class="panel reveal d2">
+    <h2>3 · Source and ranking</h2>
+    <div class="source-pick" style="margin-top:12px">
+      <label><input type="radio" name="source" value="snapshot" checked> <b>Bundled snapshot</b>
+        <span>19,806 Li-containing Materials Project entries (2026-07-20). Works offline; about a second.</span></label>
+      <label class="{% if not current_user['can_live'] %}disabled{% endif %}"><input type="radio" name="source" value="live" id="srcLive" {% if not current_user['can_live'] %}disabled{% endif %}> <b>Live Materials Project</b>
+        <span>{% if current_user['can_live'] %}Queries api.materialsproject.org now. Needs a free API key and internet.{% else %}Not available for Expo guest accounts.{% endif %}</span></label>
+    </div>
+    <div class="field" id="keyField" style="margin-top:12px;max-width:520px">
+      <label for="api_key">Materials Project API key <small>{% if has_key %}MP_API_KEY is set on the server; leave blank to use it{% else %}used for this run only, never stored{% endif %}</small></label>
+      <input type="password" id="api_key" name="api_key" autocomplete="off" placeholder="{{ 'Using MP_API_KEY' if has_key else 'Paste your key' }}">
+    </div>
+    <div class="field" style="max-width:520px;margin-top:16px">
+      <label for="rm">Rank the shortlist by</label>
+      <select id="rm" name="rank_model">{% for k,v in RANK_LABELS.items() %}<option value="{{ k }}" {% if loop.first %}selected{% endif %}>{{ v }}</option>{% endfor %}</select>
+    </div>
+    <div style="margin-top:20px"><button class="btn lg" type="submit">{{ icon('bolt') }}Run screen</button></div>
+  </section>
+</form>
+
+{% if runs %}
+<section class="panel reveal">
+  <h2>Recent runs</h2>
+  <div class="table-wrap" style="margin-top:12px">
+  <table>
+    <thead><tr><th>Run</th><th>By</th><th>Source</th><th>Filters</th><th>Ranked by</th><th class="n">Passed</th></tr></thead>
+    <tbody>
+    {% for r in runs %}
+    <tr><td><a href="{{ url_for('shortlist', run_id=r.run_id) }}">{{ r.created }}</a></td><td>{{ r.run_by or 'system' }}</td><td>{{ 'live MP' if r.source=='live' else 'snapshot' }}</td>
+      <td class="wrap">{{ r.criteria_text|join('; ') }}</td><td>{{ RANK_SHORT.get(r.rank_model, r.rank_model) }}</td><td class="n">{{ r.n_stage_a }}</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  </div>
+</section>
+{% endif %}
+{% endblock %}
+{% block scripts %}
+<script>
+const kf=document.getElementById('keyField');
+function sync(){const l=document.getElementById('srcLive');kf.style.display=l&&l.checked?'grid':'none'}
+document.querySelectorAll('input[name=source]').forEach(r=>r.addEventListener('change',sync));sync();
+document.querySelectorAll('.preset').forEach(b=>b.addEventListener('click',()=>{
+  document.querySelectorAll('.preset').forEach(x=>x.classList.remove('on'));b.classList.add('on');
+  document.getElementById('bg').value=b.dataset.gap;document.getElementById('eh').value=b.dataset.hull;
+  document.getElementById('tm').checked=b.dataset.tm==='1';document.getElementById('ex').value=b.dataset.excl;}));
+</script>
+{% endblock %}

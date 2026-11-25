@@ -1,0 +1,54 @@
+{# Reality check: existence, feasibility, stability, structure model, confidence. Needs an estimate dict `a`
+   with existence, feasibility, confidence, structure (structure_summary) and cif_url. #}
+{% from "_icons.html" import icon %}
+{% macro reality(a, compact=False) -%}
+{% set ex = a.existence %}{% set fe = a.feasibility %}{% set st = a.structure %}
+<div class="reality">
+  <div class="reality-head">
+    <span class="tag {{ fe.tone }} lg-tag">{{ icon('check' if fe.tone in ('good','teal') else 'alert') }} {{ fe.label }}</span>
+    <span class="muted">{{ fe.note }}</span>
+  </div>
+  <div class="reality-grid">
+    <div class="rc">
+      <span class="rc-k">{{ icon('search') }} Does it exist?</span>
+      {% if ex.status == 'measured' %}
+        <b class="log-ok">Yes · measured in the lab</b>
+        <span>OBELiX {{ ex.obelix|map(attribute='id')|join(', ') }}{% if ex.n_obelix > 1 %} ({{ ex.n_obelix }} entries){% endif %}:
+          {% if ex.sigma_min and ex.sigma_max and ex.sigma_max/ex.sigma_min > 1.5 %}{{ ex.sigma_min|sci|safe }} – {{ ex.sigma_max|sci|safe }} S/cm{% elif ex.sigma_max %}{{ ex.sigma_max|sci|safe }} S/cm{% endif %}
+          {% if ex.icsd %} · ICSD {{ ex.icsd }}{% endif %}{% if ex.best_mp %} · {{ ex.best_mp.id }}{% endif %}</span>
+      {% elif ex.status == 'known' %}
+        <b class="log-ok">Yes · in Materials Project</b>
+        <span>{% for m in ex.mp[:3] %}{{ m.id }} ({{ m.space_group }}, E<sub>hull</sub> {{ '%.3f'|format(m.e_hull) }} eV/atom){% if not loop.last %}, {% endif %}{% endfor %}</span>
+      {% else %}
+        <b style="color:var(--violet)">No · hypothetical compound</b>
+        <span>Not found among 19,806 Materials Project Li compounds or 599 OBELiX electrolytes.</span>
+      {% endif %}
+    </div>
+    <div class="rc">
+      <span class="rc-k">{{ icon('shield') }} Chemistry checks</span>
+      <b>{{ 'Charge-balanced' if fe.charge_balanced else 'Not charge-balanced' }}</b>
+      <span>{% for r in fe.reasons %}{{ r }} {% endfor %}{% if not fe.reasons %}Oxidation states sum to zero.{% endif %}</span>
+    </div>
+    <div class="rc">
+      <span class="rc-k">{{ icon('layers') }} Stability</span>
+      <span>{{ fe.stability }}</span>
+    </div>
+    <div class="rc">
+      <span class="rc-k">{{ icon('cube') }} Crystal structure</span>
+      {% if st %}
+        {% if st.exact %}<b>Real structure</b><span>{{ st.host_id }} · {{ st.host_space_group or 'P1' }} · {{ st.n_sites }} sites</span>
+        {% else %}<b>Generated model (unrelaxed)</b><span>Built on {{ st.host_id }} ({{ st.host_formula }}, {{ st.host_space_group or 'P1' }}) by site substitution, cell ×{{ st.scale }}</span>{% endif %}
+      {% else %}<b>Not available</b><span>Scored from composition only.</span>{% endif %}
+    </div>
+    <div class="rc">
+      <span class="rc-k">{{ icon('target') }} Confidence</span>
+      <b><span class="tag {{ a.confidence.tone }}">{{ a.confidence.level }}</span></b>
+      <span>{{ a.confidence.notes|join(' ') if a.confidence.notes else 'Inside the training range; the trees agree.' }}</span>
+    </div>
+  </div>
+  <div class="reality-foot">
+    {% if a.cif_url %}<a class="btn sm" href="{{ a.cif_url }}">{{ icon('download') }}Download CIF</a>{% endif %}
+    <span class="muted">{{ a.honesty }}</span>
+  </div>
+</div>
+{%- endmacro %}

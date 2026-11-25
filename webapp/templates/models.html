@@ -1,0 +1,152 @@
+{% extends "base.html" %}
+{% from "_icons.html" import icon %}
+{% block title %}Model validation{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <p class="eyebrow">Transparency</p>
+    <h1>Model validation</h1>
+    <p class="lede">CrystalScout combines two model families. Each is judged on materials it never saw: the OBELiX held-out test split, formula- and family-grouped cross-validation, and Sendek et al.'s DFT-MD simulations.</p>
+  </div>
+</div>
+
+<section class="panel reveal">
+  <div class="panel-head"><div><h2>σ-Regressor: predicting conductivity itself</h2><p class="muted" style="margin:2px 0 0">{{ reg.protocol.target }} · {{ reg.protocol.n_total }} OBELiX materials ({{ reg.protocol.n_train }} train / {{ reg.protocol.n_test }} test, official split) · {{ reg.protocol.n_features }} features</p></div><span class="tag violet">Primary model</span></div>
+  <div class="trust">
+    <div><em>Test MAE</em><b class="num">{{ reg.models.extra_trees.test.mae|f }}</b><span>orders of magnitude, unseen materials</span></div>
+    <div><em>Test RMSE</em><b class="num">{{ reg.models.extra_trees.test.rmse|f }}</b><span>log₁₀ S/cm</span></div>
+    <div><em>Grouped CV R²</em><b class="num">{{ reg.models.extra_trees.cv.r2|f }}</b><span>5 folds, grouped by formula</span></div>
+    <div><em>Superionic AUC</em><b class="num">{{ reg.models.extra_trees.test.superionic_auc|f }}</b><span>ranking ≥ 10⁻⁴ S/cm on test</span></div>
+    <div><em>80 % interval</em><b class="num">{{ (reg.interval.test_coverage*100)|round(0)|int }} %</b><span>actual test coverage (target 80 %)</span></div>
+  </div>
+  <div class="table-wrap" style="margin-top:18px"><table>
+    <thead><tr><th>Regressor</th><th class="n">CV MAE</th><th class="n">CV R²</th><th class="n">Test MAE</th><th class="n">Test RMSE</th><th class="n">Test R²</th><th class="n">Spearman</th><th class="n">Within 1 log</th><th class="n">Superionic AUC</th></tr></thead>
+    <tbody>{% for k, m in reg.models.items() %}<tr {% if k=='extra_trees' %}style="background:#faf8ff;font-weight:700"{% endif %}><td>{{ REG_LABELS[k] }}</td>
+      <td class="n">{{ m.cv.mae|f }}</td><td class="n">{{ m.cv.r2|f }}</td><td class="n">{{ m.test.mae|f }}</td><td class="n">{{ m.test.rmse|f }}</td><td class="n">{{ m.test.r2|f }}</td>
+      <td class="n">{{ m.test.spearman|f }}</td><td class="n">{{ (m.test.within_1_log*100)|round(0)|int }} %</td><td class="n">{{ m.test.get('superionic_auc')|f }}</td></tr>{% endfor %}</tbody></table></div>
+  <p class="foot-note">{{ reg.protocol.cv }}. Extra Trees was chosen on cross-validation before the test split was scored. {{ reg.deployment.note if reg.deployment is defined else '' }}</p>
+</section>
+
+<section class="grid g2">
+  <div class="panel reveal"><h2>Predicted vs measured (held-out test)</h2><p class="muted">Each dot is an unseen material. Shaded band = within one order of magnitude; dashed lines = superionic threshold.</p><div style="margin-top:10px">{{ parity|safe }}</div></div>
+  <div class="panel reveal d1"><h2>What the σ-Regressor relies on</h2><p class="muted">Impurity-based importance of the top 10 features.</p><div style="margin-top:12px">{{ feat_bars|safe }}</div>
+    <p class="foot-note">Crystal system, number of elements and anion fractions (P, S) dominate, matching the chemistry intuition that sulfide/thiophosphate frameworks with high symmetry conduct fastest.</p></div>
+</section>
+
+<section class="panel reveal">
+  <div class="panel-head"><div><h2>Why one CrystalScout Score?</h2><p class="muted" style="margin:2px 0 0">Equal-weight average of the σ-Regressor and structure-model percentiles. Weights fixed in advance, nothing fitted.</p></div><span class="tag teal">Default ranking</span></div>
+  <div class="table-wrap"><table>
+    <thead><tr><th>Independent check</th><th class="n">Materials</th><th><span style="text-transform:none">σ</span>-Regressor</th><th>Structure model (LR)</th><th>CrystalScout Score</th></tr></thead>
+    <tbody>
+      <tr><td>OBELiX test materials with a structure</td><td class="n">{{ cons.obelix_test.n }} ({{ cons.obelix_test.n_pos }} superionic)</td>
+        {% for k in ('sigma_regressor','logistic_regression','crystalscout_score') %}<td><span class="meter"><i style="--v:{{ (cons.obelix_test[k]*100)|round(1) }}%"></i><span class="num">{{ cons.obelix_test[k]|f }}</span></span></td>{% endfor %}</tr>
+      <tr><td>DFT-MD verdicts on Materials Project crystals</td><td class="n">{{ cons.dftmd_benchmark.n }} ({{ cons.dftmd_benchmark.n_pos }} superionic)</td>
+        {% for k in ('sigma_regressor','logistic_regression','crystalscout_score') %}<td><span class="meter"><i style="--v:{{ (cons.dftmd_benchmark[k]*100)|round(1) }}%"></i><span class="num">{{ cons.dftmd_benchmark[k]|f }}</span></span></td>{% endfor %}</tr>
+    </tbody></table></div>
+  <p class="foot-note">ROC-AUC (0.5 = coin flip). Each ingredient wins one check and loses the other; the combined score is good on both, so it is the robust default for ranking new candidates.</p>
+</section>
+
+{% if hold %}
+<section class="panel reveal" id="holdout">
+  <div class="panel-head"><div><h2>Can it find good materials it has never seen?</h2>
+    <p class="muted" style="margin:2px 0 0">Family hold-out: the σ-Regressor is retrained with <b>every</b> OBELiX entry of one crystal family removed, then tested only on that family. This is the honest test for discovery, because the advisor's famous picks are otherwise in the training data.</p></div>
+    <span class="tag good">Discovery test</span></div>
+  <div class="grid g2" style="margin-top:14px">
+    {% for c in hold.cases %}
+    <div class="rc" style="padding:16px">
+      <span class="rc-k">{{ icon('shield') }} Advisor with all {{ c.n_heldout }} {{ c.family }} entries hidden</span>
+      <b style="font-size:1.05rem">{{ c.base|formula|safe }} · {{ c.n_variants }} doped variants ranked</b>
+      <span>{{ c.story }}</span>
+      <div class="table-wrap" style="margin-top:8px"><table class="desc-table">
+        <thead><tr><th>Made in a lab</th><th class="n">Advisor rank</th><th class="n">Measured <span style="text-transform:none">σ</span></th></tr></thead>
+        <tbody>{% for m in c.made|sort(attribute='rank') %}<tr><td><b>{{ m.formula|formula|safe }}</b></td><td class="n"><b class="log-ok">#{{ m.rank }}</b> of {{ c.n_variants }}</td><td class="n num">{{ m.measured|slog|safe }}</td></tr>{% endfor %}</tbody>
+      </table></div>
+      <span style="margin-top:6px"><b>{{ c.good_in_top_quarter }} of {{ c.n_good }}</b> measured superionic variants land in the advisor's top quarter, although the model never saw any {{ c.family }}.</span>
+    </div>
+    {% endfor %}
+  </div>
+  <div class="table-wrap" style="margin-top:16px"><table>
+    <thead><tr><th>Family hidden</th><th class="n">Materials</th><th class="n">Spearman <span style="text-transform:none">ρ</span></th><th class="n">MAE (log)</th><th class="n">Top-25 % superionic</th><th class="n">At random</th></tr></thead>
+    <tbody>{% for f in hold.families %}<tr><td><b>{{ f.family }}</b></td><td class="n">{{ f.n }}</td>
+      <td class="n num">{% if f.spearman is not none %}<span class="{{ 'log-ok' if f.spearman >= 0.5 else ('log-bad' if f.spearman < 0.25 else '') }}">{{ '%.2f'|format(f.spearman) }}</span>{% else %}—{% endif %}</td>
+      <td class="n num">{{ '%.2f'|format(f.mae) }}</td>
+      <td class="n num">{{ (f.top_quarter_superionic*100)|round(0)|int }} %</td><td class="n num muted">{{ (f.base_rate_superionic*100)|round(0)|int }} %</td></tr>{% endfor %}</tbody></table></div>
+  <p class="foot-note">Read it honestly: ranking inside an unseen family is good for garnets, NASICONs and thio-LISICONs, weak for argyrodites, LGPS and LISICONs, and fails for perovskites (their conductivity depends on A-site vacancy ordering that composition features do not capture). Absolute values are less reliable than the ranking (MAE 0.6–3 orders of magnitude), which is why every prediction is labelled a screening priority. {{ hold.protocol }}</p>
+</section>
+{% endif %}
+
+<h2 style="margin:32px 0 6px">Structure models (Sendek descriptors)</h2>
+<p class="muted" style="margin:0 0 16px">Classifiers on the five structural descriptors, the base paper's approach retrained on OBELiX.</p>
+<section class="panel reveal">
+  <h2>Protocol</h2>
+  <dl class="kv" style="margin-top:12px">
+    <dt>Label</dt><dd>superionic when room-temperature conductivity ≥ 10<sup>−4</sup> S/cm (Sendek et al. 2019 threshold)</dd>
+    <dt>Training data</dt><dd>{{ rep.protocol.n_train }} OBELiX structures ({{ rep.protocol.n_train_pos }} superionic), {{ rep.protocol.n_families }} crystal families across the full set</dd>
+    <dt>Held-out test</dt><dd>{{ rep.protocol.n_test }} structures ({{ rep.protocol.n_test_pos }} superionic), OBELiX's official split: no composition appears in both train and test</dd>
+    <dt>Tuning</dt><dd>{{ rep.protocol.tuning }}; the test split is used once, for this report</dd>
+    <dt>Model choice</dt><dd>{{ rep.selection_note }}</dd>
+  </dl>
+</section>
+
+<section class="panel reveal">
+  <h2>Scores</h2>
+  <div class="table-wrap" style="margin-top:12px">
+  <table>
+    <thead><tr><th>Model</th><th class="n">Test AUC<br><span class="muted">95 % CI</span></th><th class="n">PR-AUC</th><th class="n">Prec.</th><th class="n">Recall</th><th class="n">F1</th><th class="n">LOFO<br>AUC</th><th class="n">LOFO<br>F1</th><th class="n">LOFO<br>enrich.</th><th class="n">DFT-MD<br>AUC</th><th class="n">DFT-MD<br>top-10 hits</th></tr></thead>
+    <tbody>
+    {% for k in keys %}{% set m = rep.models[k] %}{% set bm = bench.models[k] %}
+    <tr><td title="{{ m.params }}">{{ m.label }}<br><span class="muted" style="font-size:.8rem">{{ m.implementation }}</span></td>
+      <td class="n">{{ m.test.roc_auc|f }}<br><span class="muted">{{ m.test_auc_ci95[0]|f }}–{{ m.test_auc_ci95[1]|f }}</span></td>
+      <td class="n">{{ m.test.pr_auc|f }}</td><td class="n">{{ m.test.precision|f }}</td><td class="n">{{ m.test.recall|f }}</td><td class="n">{{ m.test.f1|f }}</td>
+      <td class="n">{{ m.cv_all_metrics.roc_auc|f }}</td><td class="n">{{ m.cv_all_metrics.f1|f }}</td><td class="n">{{ m.cv_all_metrics.enrichment|f(1) }}×</td>
+      <td class="n">{{ bm.roc_auc|f }}</td><td class="n">{{ bm.hits_in_top_k }} / {{ bm.k }}</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  </div>
+  <p class="foot-note">LOFO: leave-family-out cross-validation over all {{ rep.protocol.n_train + rep.protocol.n_test }} structures, 10 folds, each crystal family held out whole. Enrichment: how much more often the top 20 % of the model's picks are superionic than a random pick (Sendek et al. reported 2.7× for their model on their own candidates). Precision, recall and F1 use a 0.5 threshold.</p>
+</section>
+
+<section class="grid g2">
+  <div class="panel reveal"><h2>Held-out OBELiX test split</h2><div style="margin-top:12px">{{ roc_test|safe }}</div></div>
+  <div class="panel reveal"><h2>Leave-family-out cross-validation</h2><div style="margin-top:12px">{{ roc_cv|safe }}</div></div>
+</section>
+
+<section class="panel reveal">
+  <h2>Reading these results</h2>
+  <ul>
+    <li>The test split is small ({{ rep.protocol.n_test }} structures) and lumpy: twelve near-identical Li<sub>4</sub>(Ge,Sn)(S,Se)<sub>4</sub> thio- and seleno-germanates/stannates that look fast by geometry but were measured slow sit in it together. One such cluster can swing a 67-row AUC by 0.2, which is why the confidence intervals are wide.</li>
+    <li>Leave-family-out CV uses every labelled structure and holds out whole chemical families, so it is the steadier estimate of performance on genuinely new chemistries.</li>
+    <li>On the independent DFT-MD benchmark the retrained logistic regression orders Sendek's simulated materials best, ahead of the tree models. The tree models fit OBELiX's family structure more closely and transfer worse to new Materials Project chemistry. That is why the logistic regression is the structure ingredient of the CrystalScout Score.</li>
+  </ul>
+</section>
+
+<section class="grid g2">
+  <div class="panel reveal">
+    <h2>Retrained equation versus the published one</h2>
+    <p class="muted">Raw-unit coefficients. Grey: Sendek 2019. Blue: CrystalScout, retrained on OBELiX.</p>
+    <div style="margin-top:12px">{{ coef|safe }}</div>
+    {% set ns = namespace(n=0) %}{% for k in FEATURES %}{% if (eq.coef_raw[k] > 0) == (eq.sendek2019[k] > 0) %}{% set ns.n = ns.n + 1 %}{% endif %}{% endfor %}
+    <p class="foot-note">{{ ns.n }} of 5 descriptors keep the published sign. Where they agree, this is an independent confirmation from experimental data of the published trends: longer Li–anion bonds (LASD) and shorter Li–Li hops (LLSD) favour fast conduction; ionic frameworks (SBI) and crowded anion frameworks (AFC) hinder it.</p>
+  </div>
+  <div class="panel reveal">
+    <h2>Which descriptors the ranking model relies on</h2>
+    <p class="muted">Drop in test ROC-AUC when one descriptor is shuffled (30 repeats).</p>
+    <div class="table-wrap" style="margin-top:12px"><table>
+      <thead><tr><th>Descriptor</th><th class="n">Std. coef.</th><th class="n">AUC drop</th></tr></thead>
+      <tbody>{% for k in FEATURES %}<tr><td><b>{{ k }}</b><br><span class="muted" style="font-size:.8rem">{{ FEATURE_INFO[k].name }}</span></td><td class="n">{{ '%+.2f'|format(eq.coef_standardized[k]) }}</td><td class="n">{{ '%+.3f'|format(imp[k][0]) }} <span class="muted">± {{ '%.3f'|format(imp[k][1]) }}</span></td></tr>{% endfor %}</tbody>
+    </table></div>
+  </div>
+</section>
+
+<section class="panel reveal">
+  <h2>DFT-MD benchmark (Sendek et al. 2019, Tables 1 and 2)</h2>
+  <p class="muted">{{ bench.n }} Materials Project structures simulated with DFT molecular dynamics; {{ bench.n_pos }} were superionic at room temperature. The published model chose the "ML" rows, so its own score here is biased upward; CrystalScout's models never saw these materials.</p>
+  <div class="table-wrap" style="margin-top:12px"><table>
+    <thead><tr><th>Material</th><th>MP ID</th><th>Picked by</th><th class="n">DFT-MD RT <span style="text-transform:none">σ</span> (mS/cm)</th><th>Verdict</th><th class="n">LR</th><th class="n">RF</th><th class="n">GB</th><th class="n">Sendek</th></tr></thead>
+    <tbody>{% for r in bench.table|sort(attribute='p_logreg', reverse=True) %}<tr><td>{{ r.formula|formula|safe }}</td><td class="muted">{{ r.material_id }}</td><td>{{ r.selection }}</td><td class="n">{{ r.rt_sigma_mScm }}</td>
+      <td>{% if r.superionic_dftmd %}<span class="tag brand">superionic</span>{% elif r.marginal %}<span class="tag">marginal</span>{% else %}<span class="tag">slow</span>{% endif %}</td>
+      <td class="n">{{ r.p_logreg|f }}</td><td class="n">{{ r.p_random_forest|f }}</td><td class="n">{{ r.p_gboost|f }}</td><td class="n">{{ r.p_sendek2019|f }}</td></tr>{% endfor %}</tbody>
+  </table></div>
+</section>
+{% endblock %}

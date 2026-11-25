@@ -1,0 +1,236 @@
+{
+ "families": [
+  {
+   "family": "garnet",
+   "n": 104,
+   "spearman": 0.7086707422865969,
+   "mae": 0.5644547618531017,
+   "within_1_log": 0.8461538461538461,
+   "top_quarter_superionic": 0.9615384615384616,
+   "base_rate_superionic": 0.4807692307692308,
+   "top_quarter_k": 26
+  },
+  {
+   "family": "argyrodites",
+   "n": 52,
+   "spearman": 0.28827559717138407,
+   "mae": 1.8048591987447982,
+   "within_1_log": 0.17307692307692307,
+   "top_quarter_superionic": 1.0,
+   "base_rate_superionic": 0.8076923076923077,
+   "top_quarter_k": 13
+  },
+  {
+   "family": "NASICON",
+   "n": 133,
+   "spearman": 0.6286187596748813,
+   "mae": 1.84396674460795,
+   "within_1_log": 0.18796992481203006,
+   "top_quarter_superionic": 0.8484848484848485,
+   "base_rate_superionic": 0.5413533834586466,
+   "top_quarter_k": 33
+  },
+  {
+   "family": "LGPS",
+   "n": 36,
+   "spearman": 0.2588659334704659,
+   "mae": 1.0608476229735517,
+   "within_1_log": 0.6388888888888888,
+   "top_quarter_superionic": 1.0,
+   "base_rate_superionic": 0.9722222222222222,
+   "top_quarter_k": 9
+  },
+  {
+   "family": "perovskites",
+   "n": 63,
+   "spearman": 0.12346686511969213,
+   "mae": 3.1459616143576192,
+   "within_1_log": 0.06349206349206349,
+   "top_quarter_superionic": 0.3125,
+   "base_rate_superionic": 0.5714285714285714,
+   "top_quarter_k": 16
+  },
+  {
+   "family": "thio-LISICON",
+   "n": 26,
+   "spearman": 0.8372649572649572,
+   "mae": 1.451915524730244,
+   "within_1_log": 0.4230769230769231,
+   "top_quarter_superionic": 1.0,
+   "base_rate_superionic": 0.34615384615384615,
+   "top_quarter_k": 6
+  },
+  {
+   "family": "LISICON",
+   "n": 24,
+   "spearman": 0.49652173913043474,
+   "mae": 2.9092022295383515,
+   "within_1_log": 0.16666666666666666,
+   "top_quarter_superionic": 0.0,
+   "base_rate_superionic": 0.0,
+   "top_quarter_k": 6
+  }
+ ],
+ "cases": [
+  {
+   "family": "garnet",
+   "base": "Li7La3Zr2O12",
+   "space_group": "Ia-3d",
+   "story": "Garnet LLZO: Ta, Nb, Ga and Al doping are the best-known routes to cubic, fast-conducting LLZO.",
+   "n_train": 458,
+   "n_heldout": 104,
+   "n_variants": 94,
+   "n_made": 3,
+   "base_pred": -5.34051312134529,
+   "spearman_made": 1.0,
+   "made": [
+    {
+     "formula": "Li6.5La3Zr1.5Ta0.5O12",
+     "dopant": "Ta",
+     "fraction": 0.25,
+     "rank": 1,
+     "pred": -3.1695714168416416,
+     "measured": -3.036212172654445
+    },
+    {
+     "formula": "Li6.8La3Zr1.8Ta0.2O12",
+     "dopant": "Ta",
+     "fraction": 0.1,
+     "rank": 2,
+     "pred": -3.5751732346466776,
+     "measured": -3.136677139879544
+    },
+    {
+     "formula": "Li6La3ZrTaO12",
+     "dopant": "Ta",
+     "fraction": 0.5,
+     "rank": 5,
+     "pred": -3.7731053636234457,
+     "measured": -3.4559319556497243
+    }
+   ],
+   "good_in_top_quarter": 3,
+   "n_good": 3,
+   "median_rank_good_pct": 0.02127659574468085,
+   "top5": [
+    {
+     "formula": "Li6.5La3Zr1.5Ta0.5O12",
+     "dopant": "Ta",
+     "fraction": 0.25,
+     "rank": 1,
+     "pred": -3.1695714168416416,
+     "measured": -3.036212172654445
+    },
+    {
+     "formula": "Li6.8La3Zr1.8Ta0.2O12",
+     "dopant": "Ta",
+     "fraction": 0.1,
+     "rank": 2,
+     "pred": -3.5751732346466776,
+     "measured": -3.136677139879544
+    },
+    {
+     "formula": "Li6.7La2.7Hf0.3Zr2O12",
+     "dopant": "Hf",
+     "fraction": 0.1,
+     "rank": 3,
+     "pred": -3.6358179123564343,
+     "measured": null
+    },
+    {
+     "formula": "Li6.25La2.25Hf0.75Zr2O12",
+     "dopant": "Hf",
+     "fraction": 0.25,
+     "rank": 4,
+     "pred": -3.7210355409574922,
+     "measured": null
+    },
+    {
+     "formula": "Li6La3ZrTaO12",
+     "dopant": "Ta",
+     "fraction": 0.5,
+     "rank": 5,
+     "pred": -3.7731053636234457,
+     "measured": -3.4559319556497243
+    }
+   ]
+  },
+  {
+   "family": "argyrodites",
+   "base": "Li6PS5Cl",
+   "space_group": "F-43m",
+   "story": "Argyrodite Li6PS5Cl: halide mixing (Br) and Li-deficient halogen-rich variants are known to help.",
+   "n_train": 510,
+   "n_heldout": 52,
+   "n_variants": 39,
+   "n_made": 2,
+   "base_pred": -5.9055738603042265,
+   "spearman_made": null,
+   "made": [
+    {
+     "formula": "Li6PS5Cl0.5Br0.5",
+     "dopant": "Br",
+     "fraction": 0.5,
+     "rank": 2,
+     "pred": -4.264725022250212,
+     "measured": -2.4775557664936803
+    },
+    {
+     "formula": "Li6PS5Cl0.75Br0.25",
+     "dopant": "Br",
+     "fraction": 0.25,
+     "rank": 3,
+     "pred": -4.286315385869559,
+     "measured": -2.6458915608525992
+    }
+   ],
+   "good_in_top_quarter": 2,
+   "n_good": 2,
+   "median_rank_good_pct": 0.0641025641025641,
+   "top5": [
+    {
+     "formula": "Li6.25P0.75Ge0.25S5Cl",
+     "dopant": "Ge",
+     "fraction": 0.25,
+     "rank": 1,
+     "pred": -4.24595071444327,
+     "measured": null
+    },
+    {
+     "formula": "Li6PS5Cl0.5Br0.5",
+     "dopant": "Br",
+     "fraction": 0.5,
+     "rank": 2,
+     "pred": -4.264725022250212,
+     "measured": -2.4775557664936803
+    },
+    {
+     "formula": "Li6PS5Cl0.75Br0.25",
+     "dopant": "Br",
+     "fraction": 0.25,
+     "rank": 3,
+     "pred": -4.286315385869559,
+     "measured": -2.6458915608525992
+    },
+    {
+     "formula": "Li6PS5Cl0.75I0.25",
+     "dopant": "I",
+     "fraction": 0.25,
+     "rank": 4,
+     "pred": -4.310485990142712,
+     "measured": null
+    },
+    {
+     "formula": "Li6.1P0.9Ge0.1S5Cl",
+     "dopant": "Ge",
+     "fraction": 0.1,
+     "rank": 5,
+     "pred": -4.314855395218143,
+     "measured": null
+    }
+   ]
+  }
+ ],
+ "seconds": 32.2,
+ "protocol": "Extra Trees (same settings as the deployed model) retrained with every OBELiX entry of the family removed; tested only on that family. The advisor case study scores every generated variant on the base's crystal."
+}

@@ -1,0 +1,98 @@
+<!doctype html>
+{% from "_icons.html" import icon %}
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sign in · CrystalScout</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap">
+<link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='login.css') }}">
+<link rel="icon" href="{{ url_for('static', filename='logo.svg') }}" type="image/svg+xml">
+</head>
+<body class="login-body">
+<div class="login-wrap">
+  <section class="login-art">
+    <a class="mark" href="{{ url_for('auth.login') }}">
+      <img src="{{ url_for('static', filename='logo.svg') }}" width="44" height="44" alt="">
+      <span><b>CrystalScout</b><small>Solid-electrolyte discovery platform</small></span>
+    </a>
+    <div class="art-copy">
+      <p class="eyebrow">AI for next-generation batteries</p>
+      <h1>Find the solid electrolyte <span class="grad-text">before you synthesise it.</span></h1>
+      <p class="lede">CrystalScout screens 19,806 lithium compounds from the Materials Project, predicts their room-temperature ionic conductivity, and designs better ones. Every formula gets an existence check, a feasibility badge and its own crystal structure (CIF).</p>
+      <ul class="art-points">
+        <li>{{ icon('target') }}<span><b>σ-Regressor</b> predicts conductivity with an 80 % range</span></li>
+        <li>{{ icon('cube') }}<span><b>Reality check</b>: exists or hypothetical, charge, ion size, stability, CIF</span></li>
+        <li>{{ icon('sparkle') }}<span><b>Dopant Advisor</b> suggests the best doped formula, ready to make</span></li>
+      </ul>
+    </div>
+    <div class="art-stats">
+      <div><b>19,806</b><span>Li compounds scanned</span></div>
+      <div><b>562</b><span>measured electrolytes learned</span></div>
+      <div><b>0.86</b><span>superionic AUC on unseen materials</span></div>
+    </div>
+  </section>
+
+  <section class="login-panel">
+    <div class="login-card" id="card">
+      <div class="lc-head">
+        <span class="lock">{{ icon('lock') }}</span>
+        <div><h2>Welcome back</h2><p>Sign in to your CrystalScout workspace</p></div>
+      </div>
+      {% if error %}<div class="lc-error" role="alert">{{ icon('alert') }}<span>{{ error }}</span></div>{% endif %}
+      {% for cat, msg in get_flashed_messages(with_categories=true) %}<div class="lc-flash {{ cat }}" role="status">{{ msg }}</div>{% endfor %}
+      <form method="post" novalidate id="loginForm" autocomplete="on">
+        <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+        <div class="lc-field {% if field=='username' %}bad{% endif %}">
+          <label for="username">Username</label>
+          <div class="lc-input">{{ icon('user') }}<input id="username" name="username" type="text" value="{{ username }}" autocomplete="username" autocapitalize="off" spellcheck="false" placeholder="e.g. scientist" required {% if not username %}autofocus{% endif %}></div>
+        </div>
+        <div class="lc-field {% if field=='password' %}bad{% endif %}">
+          <label for="password">Password</label>
+          <div class="lc-input">{{ icon('key') }}<input id="password" name="password" type="password" autocomplete="current-password" placeholder="Your password" required {% if username %}autofocus{% endif %}>
+            <button type="button" class="eye" id="eye" aria-label="Show password" aria-pressed="false"><span class="on">{{ icon('eye') }}</span><span class="off">{{ icon('eyeoff') }}</span></button></div>
+          <small class="caps" id="caps" hidden>Caps Lock is on</small>
+        </div>
+        <div class="lc-field {% if field=='captcha' %}bad{% endif %}">
+          <label for="captcha">Security check <small>type the 5 characters in the picture</small></label>
+          <div class="cap-row">
+            <img id="capImg" src="{{ captcha_uri }}" width="220" height="72" alt="Security check image: type the characters shown">
+            <button type="button" class="cap-refresh" id="capRefresh" aria-label="Show a new security image" data-tip="New image">{{ icon('refresh') }}</button>
+          </div>
+          <div class="lc-input">{{ icon('shield') }}<input id="captcha" name="captcha" type="text" inputmode="text" maxlength="5" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="5 characters" required></div>
+        </div>
+        <div class="lc-row">
+          <label class="check"><input type="checkbox" name="remember"> Keep me signed in</label>
+          <span class="muted small">Case-insensitive check</span>
+        </div>
+        <button class="btn lg lc-submit" type="submit" id="submitBtn"><span>Sign in securely</span>{{ icon('arrow') }}</button>
+      </form>
+      <div class="lc-foot">
+        {{ icon('shield') }}<span>Protected by CSRF tokens, hashed passwords, image CAPTCHA and an account lockout after 5 wrong attempts. Accounts are issued by the administrator.</span>
+      </div>
+    </div>
+    <p class="login-copy">© 2026 CrystalScout · Group G1544 · Data: OBELiX &amp; Materials Project (CC BY 4.0)</p>
+  </section>
+</div>
+<script>
+(function(){
+  // password reveal + caps lock hint
+  var pw=document.getElementById('password'), eye=document.getElementById('eye'), caps=document.getElementById('caps');
+  eye.addEventListener('click',function(){var s=pw.type==='password';pw.type=s?'text':'password';eye.setAttribute('aria-pressed',s);eye.classList.toggle('shown',s);eye.setAttribute('aria-label',s?'Hide password':'Show password');pw.focus();});
+  pw.addEventListener('keyup',function(e){caps.hidden=!(e.getModifierState&&e.getModifierState('CapsLock'));});
+  // captcha refresh
+  var img=document.getElementById('capImg'), cap=document.getElementById('captcha'), rb=document.getElementById('capRefresh');
+  rb.addEventListener('click',function(){rb.classList.add('spin');img.style.opacity=.3;
+    img.onload=function(){img.style.opacity=1;rb.classList.remove('spin');};
+    img.src='{{ url_for("auth.captcha_image") }}?t='+Date.now();cap.value='';cap.focus();});
+  cap.addEventListener('input',function(){cap.value=cap.value.toUpperCase().replace(/[^A-Z0-9]/g,'');});
+  // submit state
+  document.getElementById('loginForm').addEventListener('submit',function(){var b=document.getElementById('submitBtn');b.classList.add('busy');b.querySelector('span').textContent='Verifying…';});
+
+})();
+</script>
+</body>
+</html>

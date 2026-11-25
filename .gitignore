@@ -1,0 +1,9 @@
+data/runs/
+data/users.db
+data/.secret_key
+data/access_log.jsonl
+docs/Sendek_2019_ChemMater.pdf
+docs/Student_Enhancement_Guide.pdf
+__pycache__/
+*.pyc
+.pytest_cache/

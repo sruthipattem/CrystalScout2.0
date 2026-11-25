@@ -1,0 +1,923 @@
+{
+ "protocol": {
+  "target": "log10 of room-temperature ionic conductivity (S/cm)",
+  "data": "OBELiX; '<1E-10' upper-bound values removed",
+  "n_total": 562,
+  "n_train": 449,
+  "n_test": 113,
+  "n_features": 96,
+  "split": "OBELiX official train/test split",
+  "cv": "5-fold GroupKFold on training rows, grouped by reduced formula",
+  "n_train_with_structure": 220,
+  "n_test_with_structure": 59,
+  "interval": "80% interval from tree spread, calibrated on out-of-fold residuals",
+  "primary": "extra_trees"
+ },
+ "models": {
+  "baseline": {
+   "label": "Mean baseline",
+   "cv": {
+    "n": 449,
+    "mae": 1.7984491840750065,
+    "rmse": 2.459157665083541,
+    "r2": -0.0010677151534914664,
+    "spearman": 0.012399927491530063,
+    "within_1_log": 0.3207126948775056,
+    "superionic_auc": 0.5124309940823703
+   },
+   "test": {
+    "n": 113,
+    "mae": 1.6354127514322052,
+    "rmse": 2.253451728426012,
+    "r2": -0.000648172364748234,
+    "spearman": NaN,
+    "within_1_log": 0.3274336283185841,
+    "superionic_auc": 0.5
+   },
+   "test_with_structure": {
+    "n": 59,
+    "mae": 1.8419167424258434,
+    "rmse": 2.6935857544370734,
+    "r2": -0.0450886805824553,
+    "spearman": NaN,
+    "within_1_log": 0.3559322033898305,
+    "superionic_auc": 0.5
+   }
+  },
+  "ridge": {
+   "label": "Ridge regression",
+   "cv": {
+    "n": 449,
+    "mae": 1.2478032265134844,
+    "rmse": 1.8679551365852372,
+    "r2": 0.42240477969163637,
+    "spearman": 0.6888174829920524,
+    "within_1_log": 0.5902004454342984,
+    "superionic_auc": 0.8518606775487509
+   },
+   "test": {
+    "n": 113,
+    "mae": 1.9538204985143415,
+    "rmse": 2.680493962074475,
+    "r2": -0.41584122743740015,
+    "spearman": 0.17208195925002537,
+    "within_1_log": 0.34513274336283184,
+    "superionic_auc": 0.5421383647798742
+   },
+   "test_with_structure": {
+    "n": 59,
+    "mae": 2.535622839035179,
+    "rmse": 3.3744695861000196,
+    "r2": -0.6402217528638934,
+    "spearman": 0.15435417884278202,
+    "within_1_log": 0.23728813559322035,
+    "superionic_auc": 0.5012820512820513
+   }
+  },
+  "random_forest": {
+   "label": "Random forest (500 trees)",
+   "cv": {
+    "n": 449,
+    "mae": 0.8468463533394438,
+    "rmse": 1.4188883826898517,
+    "r2": 0.6667369430438879,
+    "spearman": 0.8682215346711217,
+    "within_1_log": 0.7505567928730512,
+    "superionic_auc": 0.9307160729179079
+   },
+   "test": {
+    "n": 113,
+    "mae": 1.3643535598875287,
+    "rmse": 1.7914604531869736,
+    "r2": 0.36758911170109554,
+    "spearman": 0.5972195075757665,
+    "within_1_log": 0.49557522123893805,
+    "superionic_auc": 0.8512578616352201
+   },
+   "test_with_structure": {
+    "n": 59,
+    "mae": 1.7711221733621292,
+    "rmse": 2.167633859839431,
+    "r2": 0.3231952726022681,
+    "spearman": 0.5310344827586208,
+    "within_1_log": 0.3220338983050847,
+    "superionic_auc": 0.8910256410256411
+   }
+  },
+  "gboost": {
+   "label": "Gradient boosting",
+   "cv": {
+    "n": 449,
+    "mae": 0.846210175013927,
+    "rmse": 1.4356588435488729,
+    "r2": 0.6588124235561809,
+    "spearman": 0.8568268952159313,
+    "within_1_log": 0.7527839643652561,
+    "superionic_auc": 0.9255431113229278
+   },
+   "test": {
+    "n": 113,
+    "mae": 1.294921634099871,
+    "rmse": 1.7440497328872446,
+    "r2": 0.40061948895562616,
+    "spearman": 0.5719412792346215,
+    "within_1_log": 0.5309734513274337,
+    "superionic_auc": 0.819811320754717
+   },
+   "test_with_structure": {
+    "n": 59,
+    "mae": 1.5625528426250614,
+    "rmse": 2.0197119881120336,
+    "r2": 0.41241538307868963,
+    "spearman": 0.5758997063692836,
+    "within_1_log": 0.4406779661016949,
+    "superionic_auc": 0.8500000000000001
+   }
+  },
+  "extra_trees": {
+   "label": "Extra Trees (500 trees) \u2014 CrystalScout \u03c3-Regressor",
+   "cv": {
+    "n": 449,
+    "mae": 0.7880475824022005,
+    "rmse": 1.3436247536566097,
+    "r2": 0.7011545138799015,
+    "spearman": 0.8704057806924005,
+    "within_1_log": 0.7661469933184856,
+    "superionic_auc": 0.9412506453790859
+   },
+   "test": {
+    "n": 113,
+    "mae": 1.3384610981339595,
+    "rmse": 1.8239595868729284,
+    "r2": 0.3444356766084573,
+    "spearman": 0.6195807220779872,
+    "within_1_log": 0.504424778761062,
+    "superionic_auc": 0.8578616352201258
+   },
+   "test_with_structure": {
+    "n": 59,
+    "mae": 1.7771586882516863,
+    "rmse": 2.2069125961262266,
+    "r2": 0.29844488123944346,
+    "spearman": 0.5641729982466395,
+    "within_1_log": 0.3559322033898305,
+    "superionic_auc": 0.8717948717948718
+   }
+  }
+ },
+ "interval": {
+  "k": 1.2044369260904406,
+  "nominal": 0.8,
+  "cv_coverage": 0.799554565701559,
+  "test_coverage": 0.8230088495575221,
+  "test_mean_halfwidth_log": 2.1313375506677397
+ },
+ "top_features": [
+  {
+   "feature": "crystal_system",
+   "importance": 0.11435437015908333
+  },
+  {
+   "feature": "n_elements",
+   "importance": 0.10361770949865871
+  },
+  {
+   "feature": "frac_P",
+   "importance": 0.03764278422503309
+  },
+  {
+   "feature": "frac_S",
+   "importance": 0.026526979905916986
+  },
+  {
+   "feature": "avgdev_period",
+   "importance": 0.024138448870205203
+  },
+  {
+   "feature": "volume_per_atom",
+   "importance": 0.023250431995705954
+  },
+  {
+   "feature": "frac_O",
+   "importance": 0.0231897757271818
+  },
+  {
+   "feature": "LLSD",
+   "importance": 0.022624105062828154
+  },
+  {
+   "feature": "centring",
+   "importance": 0.02250556247802859
+  },
+  {
+   "feature": "LASD",
+   "importance": 0.020774692217662902
+  },
+  {
+   "feature": "avgdev_electronegativity",
+   "importance": 0.02016439436699604
+  },
+  {
+   "feature": "mean_period",
+   "importance": 0.018910192229708227
+  },
+  {
+   "feature": "mean_Z",
+   "importance": 0.018172825486822815
+  },
+  {
+   "feature": "mean_electronegativity",
+   "importance": 0.017482540439398876
+  },
+  {
+   "feature": "mean_block",
+   "importance": 0.017092495591025367
+  }
+ ],
+ "test_predictions": [
+  {
+   "formula": "Li3BP2O8",
+   "family": "Borophosphates",
+   "true": -11.017728766960431,
+   "pred": -11.882315568840447
+  },
+  {
+   "formula": "Li2NaBP2O8",
+   "family": "Borophosphates",
+   "true": -17.356547323513812,
+   "pred": -10.746226661746075
+  },
+  {
+   "formula": "Li7P3S11",
+   "family": "unknown",
+   "true": -2.494850021680094,
+   "pred": -6.213560650794741
+  },
+  {
+   "formula": "Li7P3S11",
+   "family": "unknown",
+   "true": -2.065501548756432,
+   "pred": -7.2572845725912405
+  },
+  {
+   "formula": "Li3.8Ge0.8P0.2S4",
+   "family": "thio-LISICON",
+   "true": -5.749579997691106,
+   "pred": -5.574197855421044
+  },
+  {
+   "formula": "Li3.6Ge0.6P0.4S4",
+   "family": "thio-LISICON",
+   "true": -3.7569619513137056,
+   "pred": -4.2625940045527715
+  },
+  {
+   "formula": "Li3.4Ge0.4P0.6S4",
+   "family": "thio-LISICON",
+   "true": -3.184422251675733,
+   "pred": -3.6034224673274475
+  },
+  {
+   "formula": "Li3.35Ge0.35P0.65S4",
+   "family": "thio-LISICON",
+   "true": -2.812479279163537,
+   "pred": -3.8446182741778943
+  },
+  {
+   "formula": "Li3.3Ge0.3P0.7S4",
+   "family": "thio-LISICON",
+   "true": -2.7594507517174,
+   "pred": -4.093969185455322
+  },
+  {
+   "formula": "Li3.25Ge0.25P0.75S4",
+   "family": "thio-LISICON",
+   "true": -2.657577319177794,
+   "pred": -4.347228368415322
+  },
+  {
+   "formula": "Li3.2Ge0.2P0.8S4",
+   "family": "thio-LISICON",
+   "true": -3.255707016877324,
+   "pred": -5.039232878859318
+  },
+  {
+   "formula": "Li4Al0.33Si0.33P0.33O4",
+   "family": "LISICON",
+   "true": -5.488116639021126,
+   "pred": -7.750341189993688
+  },
+  {
+   "formula": "Li4.25Si0.75Al0.25O4",
+   "family": "LISICON",
+   "true": -7.694648630553377,
+   "pred": -8.452744500848615
+  },
+  {
+   "formula": "Li3.75Si0.75P0.25O4",
+   "family": "LISICON",
+   "true": -6.2564902352715706,
+   "pred": -7.936365736032497
+  },
+  {
+   "formula": "Li3InCl6",
+   "family": "Halide",
+   "true": -2.690369832574101,
+   "pred": -5.828419577118915
+  },
+  {
+   "formula": "Li2P2S6",
+   "family": "thio-LISICON",
+   "true": -10.10790539730952,
+   "pred": -6.291195203208181
+  },
+  {
+   "formula": "Li3(Mo8S8O8(OH)8(HWO5(H2O)))*(H2O)18",
+   "family": "unknown",
+   "true": -6.42021640338319,
+   "pred": -7.00887455693514
+  },
+  {
+   "formula": "Li3YBr6",
+   "family": "halides",
+   "true": -2.7166987712964503,
+   "pred": -6.286567721173986
+  },
+  {
+   "formula": "LiAlCl4",
+   "family": "halides",
+   "true": -6.0,
+   "pred": -5.825267294120828
+  },
+  {
+   "formula": "(La0.9Sr0.1)LiO2",
+   "family": "Lanthanumlithiumoxide",
+   "true": -9.201349354554733,
+   "pred": -7.570779003943112
+  },
+  {
+   "formula": "La(Li0.76Mg0.08)O2",
+   "family": "Lanthanumlithiumoxide",
+   "true": -9.138465589140962,
+   "pred": -7.38261744419394
+  },
+  {
+   "formula": "LiTa2PO8",
+   "family": "oxides",
+   "true": -2.795880017344075,
+   "pred": -8.12573729170006
+  },
+  {
+   "formula": "Li0.4Na0.1La0.5Nb2O6",
+   "family": "perovskites",
+   "true": -5.0034883278458215,
+   "pred": -7.3719207537254245
+  },
+  {
+   "formula": "Li0.3Na0.2La0.5Nb2O6",
+   "family": "perovskites",
+   "true": -4.954677021213342,
+   "pred": -7.358521345962292
+  },
+  {
+   "formula": "Li0.2Na0.3La0.5Nb2O6",
+   "family": "perovskites",
+   "true": -4.928117992693875,
+   "pred": -7.36110374913074
+  },
+  {
+   "formula": "Li0.1Na0.4La0.5Nb2O6",
+   "family": "perovskites",
+   "true": -4.91721462968355,
+   "pred": -7.282410177436292
+  },
+  {
+   "formula": "Li0.07Na0.43La0.5Nb2O6",
+   "family": "perovskites",
+   "true": -4.910094888560602,
+   "pred": -7.373790298831848
+  },
+  {
+   "formula": "Li0.04Na0.46La0.5Nb2O6",
+   "family": "perovskites",
+   "true": -5.228412519118745,
+   "pred": -7.744233060039764
+  },
+  {
+   "formula": "Li0.02Na0.48La0.5Nb2O6",
+   "family": "perovskites",
+   "true": -5.399027104313252,
+   "pred": -7.382459032742816
+  },
+  {
+   "formula": "(Ag0.33Li0.67)0.27La0.57TiO3",
+   "family": "perovskites",
+   "true": -4.0,
+   "pred": -4.820876644417
+  },
+  {
+   "formula": "(Ag0.5Li0.5)0.27La0.57TiO3",
+   "family": "perovskites",
+   "true": -4.638272163982407,
+   "pred": -4.968940989451447
+  },
+  {
+   "formula": "(Ag0.67Li0.33)0.27La0.57TiO3",
+   "family": "perovskites",
+   "true": -6.698970004336019,
+   "pred": -5.106687740723226
+  },
+  {
+   "formula": "Li4SnSe4",
+   "family": "Chalcogenidotetrelates",
+   "true": -4.698970004336019,
+   "pred": -7.648738416239347
+  },
+  {
+   "formula": "Li3Cr(MoO4)3",
+   "family": "molybdates",
+   "true": -8.496209316942819,
+   "pred": -7.86598414494949
+  },
+  {
+   "formula": "Li3Fe(MoO4)3",
+   "family": "molybdates",
+   "true": -9.229884705212898,
+   "pred": -7.761063891509282
+  },
+  {
+   "formula": "Li10Ge0.95Si0.05P2S12",
+   "family": "thio-LISICON",
+   "true": -2.065501548756432,
+   "pred": -2.064166411022266
+  },
+  {
+   "formula": "La0.57Li0.29TiO3",
+   "family": "perovskites",
+   "true": -2.795880017344075,
+   "pred": -3.8475826940451503
+  },
+  {
+   "formula": "Li2.5Zn0.25PS4",
+   "family": "sulfides",
+   "true": -3.0757207139381184,
+   "pred": -5.709807047235363
+  },
+  {
+   "formula": "LiZnPS4",
+   "family": "sulfides",
+   "true": -7.267606240177032,
+   "pred": -5.9409169307955985
+  },
+  {
+   "formula": "Li2Zn0.5PS4",
+   "family": "sulfides",
+   "true": -3.886056647693163,
+   "pred": -6.0148983589309655
+  },
+  {
+   "formula": "Li1.5Zn0.75PS4",
+   "family": "sulfides",
+   "true": -4.782516055786093,
+   "pred": -6.227003887213351
+  },
+  {
+   "formula": "Li0.27La0.57TiO3",
+   "family": "perovskites",
+   "true": -3.4685210829577446,
+   "pred": -3.1524681105017835
+  },
+  {
+   "formula": "La0.61Li0.18TiO3",
+   "family": "perovskites",
+   "true": -3.385102783966865,
+   "pred": -3.2974237860067843
+  },
+  {
+   "formula": "La0.55Li0.36TiO3",
+   "family": "perovskites",
+   "true": -3.162411561764489,
+   "pred": -3.0934213686789103
+  },
+  {
+   "formula": "La0.54Li0.39TiO3",
+   "family": "perovskites",
+   "true": -3.186419011431808,
+   "pred": -3.106468016516343
+  },
+  {
+   "formula": "La0.52Li0.45TiO3",
+   "family": "perovskites",
+   "true": -3.300162274132754,
+   "pred": -3.1322393593708053
+  },
+  {
+   "formula": "La0.58Li0.27TiO3",
+   "family": "perovskites",
+   "true": -3.2225731776106885,
+   "pred": -3.1600437723828314
+  },
+  {
+   "formula": "La0.56Li0.33TiO3",
+   "family": "perovskites",
+   "true": -3.175223537524454,
+   "pred": -5.229697182809811
+  },
+  {
+   "formula": "La0.56Li0.33TiO3",
+   "family": "perovskites",
+   "true": -3.7825160557860937,
+   "pred": -3.081979051068171
+  },
+  {
+   "formula": "Nd0.25Li0.25TaO3",
+   "family": "perovskites",
+   "true": -7.882728704344236,
+   "pred": -6.628089116322351
+  },
+  {
+   "formula": "Sm0.25Li0.25TaO3",
+   "family": "perovskites",
+   "true": -9.364516253185087,
+   "pred": -6.606529507964389
+  },
+  {
+   "formula": "Li7La3Hf2O12",
+   "family": "garnet",
+   "true": -6.006563769502388,
+   "pred": -5.483787512218085
+  },
+  {
+   "formula": "Li3.333Mg0.333P2S6",
+   "family": "thio-phosphate",
+   "true": -7.086186147616283,
+   "pred": -5.661476202896867
+  },
+  {
+   "formula": "Li2.667Mg0.667P2S6",
+   "family": "thio-phosphate",
+   "true": -5.3979400086720375,
+   "pred": -5.943054189291111
+  },
+  {
+   "formula": "Li3YCl6",
+   "family": "halides",
+   "true": -3.268411234813261,
+   "pred": -5.895179082440459
+  },
+  {
+   "formula": "Li1.8Cr0.8Ti1.2(PO4)3",
+   "family": "NASICON",
+   "true": -3.619788758288394,
+   "pred": -3.575183811149062
+  },
+  {
+   "formula": "Li1.2Al1.1Ta0.9(PO4)3",
+   "family": "NASICON",
+   "true": -6.187086643357144,
+   "pred": -4.653066989748488
+  },
+  {
+   "formula": "LiAlTa(PO4)3",
+   "family": "NASICON",
+   "true": -6.187086643357144,
+   "pred": -6.283123973517857
+  },
+  {
+   "formula": "Li3AlN2",
+   "family": "nitrides",
+   "true": -7.301029995663981,
+   "pred": -6.894956795273811
+  },
+  {
+   "formula": "Li6PO5Cl",
+   "family": "argyrodites",
+   "true": -9.0,
+   "pred": -7.227000925269267
+  },
+  {
+   "formula": "Li7Ge3PS12",
+   "family": "argyrodites",
+   "true": -3.958607314841775,
+   "pred": -5.476197883779691
+  },
+  {
+   "formula": "Li5PS4(BH4)2",
+   "family": "argyrodites",
+   "true": -2.744727494896694,
+   "pred": -4.623798869399896
+  },
+  {
+   "formula": "Fe0.16La2.95Li5.68Zr2O12",
+   "family": "garnet",
+   "true": -3.0291883891274822,
+   "pred": -4.307979294160298
+  },
+  {
+   "formula": "Fe0.19La2.95Li5.57Zr2O12",
+   "family": "garnet",
+   "true": -2.8601209135987635,
+   "pred": -4.4280653508753485
+  },
+  {
+   "formula": "Li3ClO",
+   "family": "antiperovskite",
+   "true": -1.6020599913279625,
+   "pred": -6.563560895619647
+  },
+  {
+   "formula": "(La0.55Li0.45)(Ti0.9Al0.1)O3",
+   "family": "perovskites",
+   "true": -2.8210230527068307,
+   "pred": -4.186667012880127
+  },
+  {
+   "formula": "(La0.6Li0.4)(Ti0.8Al0.2)O3",
+   "family": "perovskites",
+   "true": -3.245651664288981,
+   "pred": -4.170844221161841
+  },
+  {
+   "formula": "(La0.65Li0.35)(Ti0.7Al0.3)O3",
+   "family": "perovskites",
+   "true": -3.7931741239681513,
+   "pred": -4.228756538417687
+  },
+  {
+   "formula": "(La0.7Li0.3)(Ti0.6Al0.4)O3",
+   "family": "perovskites",
+   "true": -6.982966660701219,
+   "pred": -4.3454903103015585
+  },
+  {
+   "formula": "La0.6Sr0.06Li0.06TiO3",
+   "family": "perovskites",
+   "true": -4.94692155651658,
+   "pred": -4.298403191383721
+  },
+  {
+   "formula": "La0.56Sr0.1Li0.1TiO3",
+   "family": "perovskites",
+   "true": -4.863279432843593,
+   "pred": -4.205583058188351
+  },
+  {
+   "formula": "La0.51Sr0.15Li0.15TiO3",
+   "family": "perovskites",
+   "true": -4.275724130399211,
+   "pred": -4.139005488019103
+  },
+  {
+   "formula": "La0.41Sr0.25Li0.25TiO3",
+   "family": "perovskites",
+   "true": -4.11690664142431,
+   "pred": -4.140169483629964
+  },
+  {
+   "formula": "La0.385Sr0.275Li0.275TiO3",
+   "family": "perovskites",
+   "true": -4.218963061378868,
+   "pred": -4.158267374892389
+  },
+  {
+   "formula": "La0.36Sr0.3Li0.3TiO3",
+   "family": "perovskites",
+   "true": -4.716698771296451,
+   "pred": -4.100722240191787
+  },
+  {
+   "formula": "La0.58Li0.27TiO3",
+   "family": "perovskites",
+   "true": -3.079876673709276,
+   "pred": -3.213886210889748
+  },
+  {
+   "formula": "La0.56Li0.33TiO3",
+   "family": "perovskites",
+   "true": -2.886056647693163,
+   "pred": -3.059161208727614
+  },
+  {
+   "formula": "La0.55Li0.36TiO3",
+   "family": "perovskites",
+   "true": -2.812479279163537,
+   "pred": -3.071067565466953
+  },
+  {
+   "formula": "La0.54Li0.39TiO3",
+   "family": "perovskites",
+   "true": -2.903089986991944,
+   "pred": -3.079159953879043
+  },
+  {
+   "formula": "La0.52Li0.45TiO3",
+   "family": "perovskites",
+   "true": -3.1051303432547472,
+   "pred": -3.11957278244886
+  },
+  {
+   "formula": "Li0.25La0.25TaO3",
+   "family": "perovskites",
+   "true": -4.583359492661719,
+   "pred": -6.298959188933951
+  },
+  {
+   "formula": "Li6.05Ga0.25La3Zr2O11.8F0.2",
+   "family": "garnet",
+   "true": -2.892790030352132,
+   "pred": -4.016837078062926
+  },
+  {
+   "formula": "Li6.8La3Zr1.9Mo0.1O12",
+   "family": "garnet",
+   "true": -4.096910013008056,
+   "pred": -3.13560517831664
+  },
+  {
+   "formula": "Li6.6La3Zr1.8Mo0.2O12",
+   "family": "garnet",
+   "true": -3.5072396109731625,
+   "pred": -3.3611953573972473
+  },
+  {
+   "formula": "Li6.4La3Zr1.7Mo0.3O12",
+   "family": "garnet",
+   "true": -3.43297363384094,
+   "pred": -3.4628491713776506
+  },
+  {
+   "formula": "Li6.2La3Zr1.6Mo0.4O12",
+   "family": "garnet",
+   "true": -3.4685210829577446,
+   "pred": -3.8584426468849973
+  },
+  {
+   "formula": "Li6.5La3Zr1.75Mo0.25O12",
+   "family": "garnet",
+   "true": -3.4775557664936803,
+   "pred": -3.662074751196787
+  },
+  {
+   "formula": "Li4Nd3TeSbO12",
+   "family": "garnet",
+   "true": -8.060480747381382,
+   "pred": -5.124744856224988
+  },
+  {
+   "formula": "Li6La3Nb1.5Y0.5O12",
+   "family": "garnet",
+   "true": -3.72584215073632,
+   "pred": -4.505043831684872
+  },
+  {
+   "formula": "Li5.2La3Nb1.9Y0.1O12",
+   "family": "garnet",
+   "true": -4.1944991418416,
+   "pred": -4.980814339056477
+  },
+  {
+   "formula": "Li5.4La3Nb1.8Y0.2O12",
+   "family": "garnet",
+   "true": -4.17134010346468,
+   "pred": -4.848655438483271
+  },
+  {
+   "formula": "Li5.5La3Nb1.75Y0.25O12",
+   "family": "garnet",
+   "true": -4.037157318798758,
+   "pred": -4.86494327242815
+  },
+  {
+   "formula": "Li51.2Al1.6La24Zr16O96",
+   "family": "garnet",
+   "true": -3.595166283380062,
+   "pred": -3.7664134830060214
+  },
+  {
+   "formula": "Li49.6Al1.6La24Zr14.4Ta1.6O96",
+   "family": "garnet",
+   "true": -3.211831628858832,
+   "pred": -3.404504349955243
+  },
+  {
+   "formula": "Li6.8La3Zr1.8Sb0.2O12",
+   "family": "garnet",
+   "true": -4.229147988357856,
+   "pred": -3.4154083974320457
+  },
+  {
+   "formula": "Li6.6La3Zr1.6Sb0.4O12",
+   "family": "garnet",
+   "true": -3.113509274827518,
+   "pred": -3.9847555647405315
+  },
+  {
+   "formula": "Li6.4La3Zr1.4Sb0.6O12",
+   "family": "garnet",
+   "true": -3.1804560644581312,
+   "pred": -3.602214880246388
+  },
+  {
+   "formula": "Li6.2La3Zr1.2Sb0.8O12",
+   "family": "garnet",
+   "true": -3.3467874862246565,
+   "pred": -3.9776102623295255
+  },
+  {
+   "formula": "Li6La3ZrSbO12",
+   "family": "garnet",
+   "true": -3.5850266520291822,
+   "pred": -4.354228569239383
+  },
+  {
+   "formula": "Li7La3Hf2O12",
+   "family": "garnet",
+   "true": -3.619788758288394,
+   "pred": -5.288795890289944
+  },
+  {
+   "formula": "Li6.5La3Nb1.25Y0.75O12 ",
+   "family": "garnet",
+   "true": -3.5686362358410126,
+   "pred": -3.7870836747336134
+  },
+  {
+   "formula": "Li5.4La3Nb1.8Y0.75O12",
+   "family": "unknown",
+   "true": -4.600326278518962,
+   "pred": -4.661577167536216
+  },
+  {
+   "formula": "Li4SnS3Se",
+   "family": "unknown",
+   "true": -4.1249387366083,
+   "pred": -6.088099426208875
+  },
+  {
+   "formula": "Li4SnSSe3",
+   "family": "unknown",
+   "true": -6.022276394711152,
+   "pred": -6.989727354405881
+  },
+  {
+   "formula": "Li4SnS2Se2",
+   "family": "unknown",
+   "true": -4.443697499232712,
+   "pred": -6.761910656553874
+  },
+  {
+   "formula": "Li4SnSe4",
+   "family": "unknown",
+   "true": -7.346787486224656,
+   "pred": -7.764237370325701
+  },
+  {
+   "formula": "Li4Ge0.75Sn0.25Se4",
+   "family": "unknown",
+   "true": -5.221848749616356,
+   "pred": -6.8675786274986255
+  },
+  {
+   "formula": "Li4Ge0.50Sn0.50Se4",
+   "family": "unknown",
+   "true": -5.7447274948966935,
+   "pred": -7.013845793356588
+  },
+  {
+   "formula": "Li4Ge0.25Sn0.75Se4",
+   "family": "unknown",
+   "true": -6.080921907623926,
+   "pred": -6.960292941555996
+  },
+  {
+   "formula": "Li4GeS3Se",
+   "family": "unknown",
+   "true": -5.070581074285707,
+   "pred": -6.492473406426839
+  },
+  {
+   "formula": "Li4GeS2Se2",
+   "family": "unknown",
+   "true": -4.552841968657781,
+   "pred": -6.796596553727206
+  },
+  {
+   "formula": "Li4GeSe4",
+   "family": "unknown",
+   "true": -5.301029995663981,
+   "pred": -7.836326288317541
+  },
+  {
+   "formula": "Li4GeSSe3",
+   "family": "unknown",
+   "true": -4.823908740944319,
+   "pred": -7.096840996884145
+  }
+ ],
+ "deployment": {
+  "model": "Extra Trees (500 trees) \u2014 CrystalScout \u03c3-Regressor",
+  "n_rows": 562,
+  "note": "After evaluation the same model was refit on all OBELiX rows for use in the app; every reported metric comes from the model trained on the training split only."
+ },
+ "seconds": 15.7
+}

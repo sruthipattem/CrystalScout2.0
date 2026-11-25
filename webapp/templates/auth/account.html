@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+{% from "_icons.html" import icon %}
+{% block title %}Account{% endblock %}
+{% block content %}
+<div class="page-head"><div><p class="eyebrow">Your workspace</p><h1>Account &amp; access</h1></div></div>
+<div class="grid g-side-r">
+  <section class="panel reveal" style="text-align:center">
+    <span class="avatar lg" style="margin:6px auto 12px">{{ current_user['initials'] }}</span>
+    <h2>{{ current_user['full_name'] }}</h2>
+    <p class="muted" style="margin:4px auto">@{{ current_user['username'] }} · {{ current_user['org'] }}</p>
+    <span class="tag {{ current_user['role_color'] }}">{{ current_user['role_label'] }}</span>
+    {% if current_user['last_login'] %}<p class="foot-note">Signed in at {{ current_user['last_login'] }}</p>{% endif %}
+  </section>
+  <section class="panel reveal d1"><h2>What your role can do</h2>
+    {% set r = current_user['role'] %}
+    <div class="kv-list" style="margin-top:10px">
+      <div><span>Dashboard, shortlist, material reports</span><b class="log-ok">✓ allowed</b></div>
+      <div><span>Score CIFs, formulas, descriptor CSVs</span><b class="log-ok">✓ allowed</b></div>
+      <div><span>Screens on the bundled snapshot</span><b class="log-ok">✓ allowed</b></div>
+      <div><span>Live Materials Project screens</span>{% if current_user['can_live'] %}<b class="log-ok">✓ allowed</b>{% else %}<b class="log-bad">✕ not for expo guests</b>{% endif %}</div>
+      <div><span>PDF / CSV exports, REST API</span><b class="log-ok">✓ allowed</b></div>
+      <div><span>Admin console (accounts, sign-in log)</span>{% if current_user['is_admin'] %}<b class="log-ok">✓ allowed</b>{% else %}<b class="log-bad">✕ administrators only</b>{% endif %}</div>
+    </div></section>
+</div>
+<section class="panel reveal"><h2>Security</h2>
+  <div class="grid g3" style="margin-top:10px">
+    <div class="use" style="--c:var(--brand);--c-soft:var(--brand-soft);padding:0"><div class="ic">{{ icon('lock') }}</div><h3>Hashed passwords</h3><p>Salted hashes only, checked in constant time. Self-registration is off.</p></div>
+    <div class="use" style="--c:var(--teal);--c-soft:var(--teal-soft);padding:0"><div class="ic">{{ icon('shield') }}</div><h3>Human check</h3><p>Self-hosted image CAPTCHA on every sign-in, one attempt per image, 5-minute expiry.</p></div>
+    <div class="use" style="--c:var(--amber);--c-soft:var(--amber-soft);padding:0"><div class="ic">{{ icon('clock') }}</div><h3>Lockout &amp; audit</h3><p>5 wrong passwords pause the account for 10 minutes. Every attempt is logged for the admin.</p></div>
+  </div>
+  <p class="foot-note">To change your password, update <code>CRYSTALSCOUT_PW_{{ current_user['username']|upper }}</code> and restart the app. Changing it signs that account out everywhere.</p>
+</section>
+{% endblock %}

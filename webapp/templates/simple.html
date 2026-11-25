@@ -1,0 +1,71 @@
+{% extends "base.html" %}
+{% from "_icons.html" import icon %}
+{% from "_sigma.html" import sigma_card %}
+{% from "_reality.html" import reality %}
+{% block title %}Quick check{% endblock %}
+{% block content %}
+<div class="s-main">
+  <div class="page-head" style="margin-bottom:6px"><div>
+    <p class="eyebrow">Quick check · 10 seconds</p>
+    <h1>Is this material a good <span class="grad-text">solid electrolyte?</span></h1>
+    <p class="lede">Type a chemical formula or drop a crystal file. CrystalScout predicts its room-temperature ionic conductivity and tells you whether it is worth lab time.</p>
+  </div></div>
+  {% if error %}<p class="error" role="alert">{{ error }}</p>{% endif %}
+
+  <div class="s-card reveal">
+    <h2>{{ icon('bolt') }} From a formula</h2>
+    <form method="post" data-loading="Checking your formula…" data-steps="Reading the formula|Checking Materials Project and OBELiX|Building the crystal structure|Computing structure descriptors|Running 500 decision trees|Checking feasibility">
+      <input type="hidden" name="_csrf" value="{{ csrf_token() }}"><input type="hidden" name="action" value="formula">
+      <div class="s-row">
+        <div class="field"><label for="f">Formula <small>optional space group after a space</small></label><input id="f" name="formula" type="text" value="{{ formula }}" placeholder="e.g. Li6PS5Cl" autocomplete="off"></div>
+        <button class="btn lg" type="submit">{{ icon('sparkle') }}Predict</button>
+      </div>
+      <div class="chips">{% for e in examples %}<button type="button" class="chip ex" style="cursor:pointer" data-v="{{ e }}">{{ e }}</button>{% endfor %}</div>
+    </form>
+    {% if est %}
+    <div class="s-result">
+      <div>
+        <div class="s-formula">{{ est.formula|formula|safe }}{% if est.space_group %} <small class="muted" style="font-size:.9rem">{{ est.space_group }}</small>{% endif %}</div>
+        <span class="tag">{{ est.flags.family_label }}</span> <span class="tag {{ est.verdict.tone }}">{{ est.verdict.label }}</span>
+      </div>
+      <div class="ring lg" style="--pct:{{ (est.sigma.cs_score*100)|round(0) }}"><div class="in"><b>{{ (est.sigma.cs_score*100)|round(0)|int }}</b><small>CS Score</small></div></div>
+      <div class="s-why">{{ sigma_card(est.sigma) }}
+        {% if est.obelix %}<p class="note ok" style="margin-top:12px">Measured in the lab (OBELiX {{ est.obelix.ID }}): <b>{{ est.obelix.sigma|sci|safe }} S/cm</b>.</p>{% endif %}
+        <p class="foot-note">{{ est.verdict.action }}</p></div>
+    </div>
+    {{ reality(est) }}
+    <div class="hero-actions" style="margin-top:14px">
+      <a class="btn quiet sm" href="{{ url_for('lab', formula=est.formula, sg=est.space_group or '') }}">{{ icon('sliders') }}Edit in Formula Lab</a>
+      <a class="btn quiet sm" href="{{ url_for('advisor', formula=est.formula, sg=est.space_group or '') }}">{{ icon('sparkle') }}Suggest dopants</a>
+      <a class="btn quiet sm" href="{{ url_for('recipe', formula=est.formula, sg=est.space_group or '') }}">{{ icon('flask') }}Synthesis recipe</a>
+    </div>
+    {% endif %}
+  </div>
+
+  <div class="s-card reveal d1">
+    <h2>{{ icon('cube') }} From a crystal file</h2>
+    <form method="post" enctype="multipart/form-data" data-loading="Analysing the crystal…" data-steps="Reading the CIF|Applying symmetry operations|Computing the 5 Sendek descriptors|Running 500 decision trees|Scoring with logistic regression">
+      <input type="hidden" name="_csrf" value="{{ csrf_token() }}"><input type="hidden" name="action" value="check">
+      <div class="s-row"><label class="drop" style="flex:1">{{ icon('upload') }}<b>Drop a .cif file</b><span>or click to choose</span><input type="file" name="cif" accept=".cif,text/plain"><div class="files"></div></label></div>
+      <div style="margin-top:12px"><button class="btn" type="submit">{{ icon('sparkle') }}Analyse structure</button></div>
+    </form>
+    {% if result %}
+    <div class="s-result">
+      <div><div class="s-formula">{{ result.row.formula|formula|safe }}</div><span class="tag {{ result.verdict.tone }}">{{ result.verdict.label }}</span> <span class="muted">{{ result.name }}</span></div>
+      <div class="ring lg" style="--pct:{{ (result.sigma.cs_score*100)|round(0) }}"><div class="in"><b>{{ (result.sigma.cs_score*100)|round(0)|int }}</b><small>CS Score</small></div></div>
+      <div class="s-why">{{ sigma_card(result.sigma) }}<p style="margin-top:10px">{{ result.why }}</p>
+        <a class="btn ghost" href="{{ result.url }}">Open the full report {{ icon('arrow') }}</a></div>
+    </div>
+    {% endif %}
+  </div>
+
+  <div class="s-card reveal d2">
+    <div class="section-title" style="margin:0"><h2>{{ icon('star') }} Today's top candidates</h2><a href="{{ url_for('shortlist') }}">Full shortlist {{ icon('arrow') }}</a></div>
+    <ol class="s-list">
+      {% for r in top %}<li><a class="mat" style="font-weight:750;text-decoration:none;color:var(--ink)" href="{{ url_for('material', mp_id=r.material_id, run=run.run_id) }}">{{ r.formula|formula|safe }}</a>
+        <span class="prob"><i style="--p:{{ (r.cs_score*100)|round(1) }}%"></i></span><span class="num muted">{{ r.log10_sigma_pred|slog|safe }} S/cm</span></li>{% endfor %}
+    </ol>
+  </div>
+</div>
+{% endblock %}
+{% block scripts %}<script>document.querySelectorAll('.ex').forEach(b=>b.addEventListener('click',()=>{const f=document.getElementById('f');f.value=b.dataset.v;f.form.submit();}));</script>{% endblock %}

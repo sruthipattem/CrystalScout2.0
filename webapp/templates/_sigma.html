@@ -1,0 +1,22 @@
+{% from "_icons.html" import icon %}
+{# σ read-out block. Needs: sigma (from insight.sigma_readout) #}
+{% macro sigma_card(sigma) -%}
+<div class="bigprob"><b class="grad-text">{{ sigma.sigma_text.split(' S/cm')[0] }}</b><span class="muted">S/cm predicted at room temperature</span></div>
+<p class="honest">{{ icon('alert') }} Screening priority from the model, not a measured conductivity.</p>
+<p style="margin-top:6px"><span class="tag {{ sigma.tier.tone }}"><span class="dot"></span>{{ sigma.tier.name }}</span> <span class="muted">{{ sigma.tier.note }}</span></p>
+<div class="sigma-gauge" aria-label="Predicted conductivity on a scale from 10^-10 to 10^-1 S/cm">
+  <span class="iv" style="left:{{ sigma.gauge_lo }}%;width:{{ [sigma.gauge_hi - sigma.gauge_lo, 1]|max }}%"></span>
+  <span class="thr" style="left:{{ (6/9*100)|round(2) }}%" title="10⁻⁴ superionic"></span>
+  <span class="thr" style="left:{{ (7/9*100)|round(2) }}%" title="1 mS/cm"></span>
+  <span class="pin" style="left:{{ sigma.gauge_pct }}%" data-v="{{ sigma.sigma_text }}"></span>
+  <span class="ticks"><span>10⁻¹⁰</span><span>10⁻⁸</span><span>10⁻⁶</span><span>10⁻⁴</span><span>10⁻²</span></span>
+</div>
+<div class="kv-list">
+  <div><span>{{ sigma.interval }} % prediction range</span><b>{{ sigma.lo_text }} – {{ sigma.hi_text }}</b></div>
+  {% if sigma.sigma_pct is defined and sigma.sigma_pct is not none %}<div><span>Position in the standard screen</span><b>higher than {{ (sigma.sigma_pct*100)|round(0)|int }} % of candidates</b></div>{% endif %}
+  <div><span>Trees voting superionic</span><b>{{ (sigma.p_trees_superionic*100)|round(0)|int }} %</b></div>
+  <div><span>Evidence used</span><b>{{ 'composition + crystal structure' if sigma.has_structure else 'composition only' }}</b></div>
+  {% if sigma.known_composition %}<div><span>Training data</span><b>composition measured in OBELiX</b></div>{% endif %}
+  {% if sigma.out_of_range %}<div><span>Outside training range</span><b style="color:var(--warn)">{{ sigma.out_of_range|join(', ') }}</b></div>{% endif %}
+</div>
+{%- endmacro %}

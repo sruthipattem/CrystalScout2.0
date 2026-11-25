@@ -1,0 +1,203 @@
+{% extends "base.html" %}
+{% from "_icons.html" import icon %}
+{% block title %}Formula Lab{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <p class="eyebrow">Design · Innovation</p>
+    <h1>Formula Lab <span class="tag violet" style="vertical-align:middle">NEW</span></h1>
+    <p class="lede">Edit a chemical formula and watch everything respond instantly: does the compound exist, is it chemically sensible, what does its crystal look like, and how fast would lithium move through it. Every formula gets a downloadable CIF.</p>
+  </div>
+  <div class="actions">
+    <a class="btn quiet" id="toAdvisor" href="{{ url_for('advisor') }}">{{ icon('sparkle') }}Suggest dopants</a>
+    <a class="btn ghost" id="toRecipe" href="{{ url_for('recipe') }}">{{ icon('flask') }}Synthesis recipe</a>
+  </div>
+</div>
+
+<div class="grid g-side">
+  <section class="panel reveal">
+    <div class="fields" style="grid-template-columns:2fr 1fr">
+      <div class="field"><label for="lf">Formula <small>type freely, e.g. Li6PS5Cl0.5Br0.5</small></label>
+        <input id="lf" type="text" value="{{ formula }}" autocomplete="off" spellcheck="false" style="font-size:1.25rem;font-weight:700;letter-spacing:.01em"></div>
+      <div class="field"><label for="lsg">Space group <small>optional, improves accuracy</small></label>
+        <input id="lsg" type="text" value="{{ sg }}" placeholder="e.g. F-43m" autocomplete="off"></div>
+    </div>
+    <div class="chips" id="presets" style="margin-top:12px">
+      {% for f, g in [("Li6PS5Cl","F-43m"),("Li10GeP2S12","P4_2/nmc"),("Li7La3Zr2O12","Ia-3d"),("Li3InCl6","C2/m"),("Li3PS4","Pnma"),("Li3YCl6","P-3m1")] %}
+      <button class="chip" type="button" data-f="{{ f }}" data-g="{{ g }}" style="cursor:pointer">{{ f }}</button>{% endfor %}
+    </div>
+    <h3 style="margin-top:22px">Element editor</h3>
+    <p class="muted" style="margin-top:4px">Change an amount with − / + or swap an element for a chemically similar one. The formula updates and the model re-predicts.</p>
+    <div id="editor" class="lab-editor"></div>
+    <div id="labErr" class="error" style="display:none;margin-top:12px"></div>
+    <div style="display:flex;gap:10px;margin-top:18px;flex-wrap:wrap">
+      <button class="btn sm quiet" type="button" id="setBase">{{ icon('target') }}Use as new baseline</button>
+      <button class="btn sm quiet" type="button" id="resetBase">{{ icon('refresh') }}Back to baseline</button>
+      <span class="muted" style="align-self:center;font-size:.85rem">Baseline: <b id="baseName">{{ base }}</b></span>
+    </div>
+  </section>
+
+  <section class="panel reveal d1" id="resultPanel">
+    <div class="panel-head"><h2 id="rFormula">…</h2><span class="tag" id="rTier">…</span></div>
+    <div class="bigprob"><b class="grad-text" id="rSigma">…</b><span class="muted">S/cm predicted at room temperature</span></div>
+    <p class="honest" id="rEvidence">{{ icon('alert') }} Screening priority, not a measured conductivity.</p>
+    <div class="sigma-gauge" aria-hidden="true" style="margin-top:36px">
+      <span class="iv" id="gIv"></span>
+      <span class="thr" style="left:66.67%"></span><span class="thr" style="left:77.78%"></span>
+      <span class="pin" id="gPin" data-v=""></span>
+      <span class="ticks"><span>10⁻¹⁰</span><span>10⁻⁸</span><span>10⁻⁶</span><span>10⁻⁴</span><span>10⁻²</span></span>
+    </div>
+    <div id="delta" class="verdict tone-muted" style="margin-top:6px">
+      <span class="ic">{{ icon('trending') }}</span><div><b id="dHead">…</b><p id="dText"></p></div>
+    </div>
+    <div class="kv-list" style="margin-top:12px">
+      <div><span>80 % prediction range</span><b id="rRange">…</b></div>
+      <div><span>Trees voting superionic</span><b id="rTrees">…</b></div>
+      <div><span>Charge balance</span><b id="rCharge">…</b></div>
+      <div><span>Does it exist?</span><b id="rExist">…</b></div>
+      <div><span>Confidence</span><b id="rConf">…</b></div>
+      <div><span>Engineering flags</span><b id="rFlags">…</b></div>
+      <div id="rObxRow" style="display:none"><span>Lab-measured (OBELiX)</span><b id="rObx"></b></div>
+    </div>
+    <h3 style="margin-top:16px">What the edit changed</h3>
+    <ul class="legend" id="drivers"><li class="muted">Edit the formula to see which features moved.</li></ul>
+  </section>
+</div>
+
+<section class="grid g2">
+  <div class="panel reveal" id="realityPanel">
+    <div class="panel-head"><div><h2>Reality check</h2><p class="muted" style="margin:2px 0 0">Existence, chemistry and stability, updated with every edit.</p></div></div>
+    <div id="reality"><p class="muted">Checking…</p></div>
+  </div>
+  <div class="panel reveal d1">
+    <div class="panel-head"><div><h2>Crystal structure</h2><p class="muted" style="margin:2px 0 0" id="sHost">Building a structure model…</p></div>
+      <a class="btn sm" id="cifBtn" href="#" style="display:none">{{ icon('download') }}Download CIF</a></div>
+    <div class="viewer" id="viewer" aria-label="3D crystal structure; drag to rotate, scroll to zoom" style="margin-top:10px">
+      <canvas id="cv"></canvas><span class="vhint">Drag to rotate · scroll to zoom</span><div class="vlegend" id="vlegend"></div>
+    </div>
+    <div class="struct-meta" id="sMeta"></div>
+    <div id="sDesc"></div>
+    <p class="foot-note" id="sNote">One unit cell. Faded atoms are partially occupied sites.</p>
+  </div>
+</section>
+
+<section class="panel reveal">
+  <div class="panel-head"><div><h2>Your experiments</h2><p class="muted" style="margin:2px 0 0">Every formula you try this session, best first.</p></div>
+    <button class="btn sm quiet" type="button" id="clearHist">Clear</button></div>
+  <div class="table-wrap"><table>
+    <thead><tr><th>#</th><th>Formula</th><th>Predicted <span style="text-transform:none">σ</span> (S/cm)</th><th>Tier</th><th>Feasibility</th><th>vs baseline</th><th></th></tr></thead>
+    <tbody id="hist"><tr><td colspan="7" class="muted">No experiments yet.</td></tr></tbody></table></div>
+</section>
+{% endblock %}
+{% block scripts %}
+<script src="{{ url_for('static', filename='viewer.js') }}"></script>
+<script>
+(function(){
+  const $=id=>document.getElementById(id);
+  const f=$('lf'), sg=$('lsg'); let base='{{ base|e }}'; let timer=null, last=null; let hist=[];
+  const api='{{ url_for("api_lab") }}';
+  const fmtN=v=>{ if(Math.abs(v-Math.round(v))<1e-6){const n=Math.round(v);return n===1?'':String(n);} return String(+v.toFixed(3)); };
+  const build=els=>els.filter(e=>e[1]>1e-6).map(e=>e[0]+fmtN(e[1])).join('');
+  const sub=s=>s.replace(/(\d+(?:\.\d+)?)/g,'<sub>$1</sub>');
+  let seq=0;
+  function query(){
+    const q=new URLSearchParams({formula:f.value.trim(),sg:sg.value.trim(),base:base});
+    const my=++seq; document.body.classList.add('lab-busy');
+    fetch(api+'?'+q).then(r=>r.json().then(j=>({ok:r.ok,j}))).then(({ok,j})=>{
+      if(my!==seq) return;
+      document.body.classList.remove('lab-busy');
+      if(!ok){$('labErr').style.display='block';$('labErr').textContent=j.error;return;}
+      $('labErr').style.display='none'; render(j);
+    }).catch(()=>{document.body.classList.remove('lab-busy');});
+  }
+  const esc=t=>String(t==null?'':t).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+  const sci=v=>{if(v==null)return '';const [m,e]=v.toExponential(1).split('e');return m+' × 10<sup>'+(+e)+'</sup>';};
+  function renderReality(j){
+    const ex=j.existence, fe=j.feasibility, st=j.structure, cf=j.confidence;
+    let exist='';
+    if(ex.status==='measured'){const ids=ex.obelix.map(o=>o.id).join(', ');
+      const rng=(ex.sigma_min&&ex.sigma_max&&ex.sigma_max/ex.sigma_min>1.5)?sci(ex.sigma_min)+' – '+sci(ex.sigma_max):sci(ex.sigma_max);
+      exist=`<b class="log-ok">Yes · measured in the lab</b><span>OBELiX ${esc(ids)}${ex.n_obelix>1?' ('+ex.n_obelix+' entries)':''}: ${rng} S/cm${ex.icsd?' · ICSD '+esc(ex.icsd):''}${ex.best_mp?' · '+esc(ex.best_mp.id):''}</span>`;}
+    else if(ex.status==='known'){exist=`<b class="log-ok">Yes · in Materials Project</b><span>${ex.mp.slice(0,3).map(m=>esc(m.id)+' ('+esc(m.space_group)+', E<sub>hull</sub> '+m.e_hull.toFixed(3)+' eV/atom)').join(', ')}</span>`;}
+    else exist=`<b style="color:var(--violet)">No · hypothetical compound</b><span>Not found among 19,806 Materials Project Li compounds or 599 OBELiX electrolytes.</span>`;
+    const struct=st?(st.exact?`<b>Real structure</b><span>${esc(st.host_id)} · ${esc(st.host_space_group||'P1')} · ${st.n_sites} sites</span>`:
+      `<b>Generated model (unrelaxed)</b><span>Built on ${esc(st.host_id)} (${esc(st.host_formula)}, ${esc(st.host_space_group||'P1')}) by site substitution, cell ×${st.scale}</span>`):'<b>Not available</b><span>Scored from composition only.</span>';
+    $('reality').innerHTML=`<div class="reality" style="margin-top:0">
+      <div class="reality-head"><span class="tag ${fe.tone} lg-tag">${esc(fe.label)}</span><span class="muted">${esc(fe.note)}</span></div>
+      <div class="reality-grid">
+        <div class="rc"><span class="rc-k">Does it exist?</span>${exist}</div>
+        <div class="rc"><span class="rc-k">Chemistry checks</span><b>${fe.charge_balanced?'Charge-balanced':'Not charge-balanced'}</b><span>${esc(fe.reasons.join(' ')||'Oxidation states sum to zero.')}</span></div>
+        <div class="rc"><span class="rc-k">Stability</span><span>${esc(fe.stability)}</span></div>
+        <div class="rc"><span class="rc-k">Crystal structure</span>${struct}</div>
+        <div class="rc"><span class="rc-k">Confidence</span><b><span class="tag ${cf.tone}">${cf.level}</span></b><span>${esc(cf.notes.join(' ')||'Inside the training range; the trees agree.')}</span></div>
+      </div>
+      <div class="reality-foot"><span class="muted">${esc(j.honesty)}</span></div></div>`;
+    $('rExist').innerHTML=ex.status==='hypothetical'?'<span style="color:var(--violet)">hypothetical</span>':'<span class="log-ok">✓ '+(ex.status==='measured'?'measured':'known (DFT)')+'</span>';
+    $('rConf').innerHTML=`<span class="tag ${cf.tone}">${cf.level}</span>`;
+  }
+  function renderStructure(j){
+    const st=j.structure;
+    if(!st){$('sHost').textContent='No crystal structure could be built for this formula.';$('cifBtn').style.display='none';$('sMeta').innerHTML='';$('sDesc').innerHTML='';
+      if(window.CSViewer) CSViewer.set({lattice:[[1,0,0],[0,1,0],[0,0,1]],atoms:[]}); return;}
+    $('sHost').innerHTML=st.exact?`Real structure: ${esc(st.host_id)} (${esc(st.host_space_group||'P1')})`:`Generated on ${esc(st.host_id)} · ${esc(st.host_formula)} · unrelaxed`;
+    $('cifBtn').style.display='inline-flex'; $('cifBtn').href=j.cif_url;
+    if(window.CSViewer) CSViewer.set(st.viewer);
+    const L=st.lattice;
+    $('sMeta').innerHTML=`<div><span class="muted">a, b, c (Å)</span><b>${L.a}, ${L.b}, ${L.c}</b></div><div><span class="muted">Cell volume</span><b>${L.volume} Å³</b></div><div><span class="muted">Volume per atom</span><b>${st.volume_per_atom??'—'} Å³</b></div>`;
+    if(j.descriptor_change){
+      $('sDesc').innerHTML=`<table class="desc-table" style="margin-top:12px"><thead><tr><th>Descriptor</th><th class="n">Baseline</th><th class="n">This formula</th></tr></thead><tbody>${j.descriptor_change.map(d=>`<tr><td><b>${d.name}</b></td><td class="n num">${d.before}</td><td class="n num">${d.after}${Math.abs(d.after-d.before)>1e-3?(d.after>d.before?' <span class="log-ok">▲</span>':' <span class="log-bad">▼</span>'):''}</td></tr>`).join('')}</tbody></table>`;
+    } else if(st.descriptors){const d=st.descriptors;
+      $('sDesc').innerHTML=`<div class="struct-meta">${['LLB','SBI','AFC','LASD','LLSD'].map(k=>`<div><span class="muted">${k}</span><b>${(+d[k]).toFixed(3)}</b></div>`).join('')}</div>`;
+    } else $('sDesc').innerHTML='';
+    $('sNote').textContent=st.exact?'One unit cell of the real structure. Faded atoms are partially occupied sites.':'One unit cell. Mixed sites carry fractional occupancies (faded atoms). Relax with DFT or an ML potential before quantitative use.';
+  }
+  function schedule(){clearTimeout(timer);timer=setTimeout(query,280);}
+  function render(j){
+    last=j;
+    renderReality(j); renderStructure(j);
+    $('rEvidence').innerHTML=(j.has_structure?'Scored on the crystal structure'+(j.sigma_comp_text?' (composition only: '+esc(j.sigma_comp_text)+')':''):'Scored from composition only')+' · screening priority, not a measured conductivity.';
+    $('rFormula').innerHTML=j.pretty; $('rSigma').textContent=j.sigma_text.split(' S/cm')[0];
+    $('rTier').textContent=j.tier.name; $('rTier').className='tag '+j.tier.tone;
+    $('gIv').style.left=j.gauge[0]+'%'; $('gIv').style.width=Math.max(1,j.gauge[2]-j.gauge[0])+'%';
+    $('gPin').style.left=j.gauge[1]+'%'; $('gPin').dataset.v=j.sigma_text;
+    $('rRange').textContent=j.lo_text+' – '+j.hi_text; $('rTrees').textContent=Math.round(j.p_trees*100)+' %';
+    $('rCharge').innerHTML=j.charge_balanced?'<span class="log-ok">✓ balanced</span> '+Object.entries(j.oxidation).map(([e,q])=>e+(q>0?'+'+q:q)).join(' '):'<span class="log-bad">✕ not neutral</span>';
+    const fl=[]; if(j.flags.supply_risk.length) fl.push('supply: '+j.flags.supply_risk.join(' ')); if(j.flags.toxic.length) fl.push('toxic: '+j.flags.toxic.join(' ')); if(j.flags.moisture_sensitive) fl.push('dry-room');
+    $('rFlags').textContent=fl.length?fl.join(' · '):'none';
+    if(j.obelix){$('rObxRow').style.display='flex';$('rObx').textContent=j.obelix.sigma.toExponential(1)+' S/cm';}else $('rObxRow').style.display='none';
+    const d=$('delta');
+    if(j.base){const g=j.gain, up=j.delta_log>0.05, down=j.delta_log<-0.05;
+      d.className='verdict '+(up?'tone-good':down?'tone-warn':'tone-muted');
+      $('dHead').textContent=up?(g.toFixed(2)+'× faster than '+j.base.formula):down?((1/g).toFixed(1)+'× slower than '+j.base.formula):'About the same as '+j.base.formula;
+      $('dText').textContent=j.verdict.label+'. '+j.verdict.action+' (Compared on the '+(j.compare_path||'composition')+' path.)';
+    } else {d.className='verdict tone-'+j.verdict.tone;$('dHead').textContent=j.verdict.label;$('dText').textContent=j.verdict.action+' Edit the formula to compare.';}
+    $('drivers').innerHTML=j.drivers.length?j.drivers.map(x=>`<li><span class="tag ${x.direction==='up'?'blue':'amber'}">${x.direction==='up'?'▲':'▼'}</span> ${x.label} <b class="muted" style="font-weight:600">${(+x.before).toPrecision(3)} → ${(+x.after).toPrecision(3)}</b></li>`).join(''):'<li class="muted">Same as the baseline.</li>';
+    editor(j); addHist(j);
+    const q='?formula='+encodeURIComponent(j.formula)+(sg.value.trim()?'&sg='+encodeURIComponent(sg.value.trim()):'');
+    $('toAdvisor').href='{{ url_for("advisor") }}'+q; $('toRecipe').href='{{ url_for("recipe") }}'+q;
+  }
+  function editor(j){
+    const els=j.elements; const ed=$('editor');
+    ed.innerHTML=els.map(([e,n],i)=>`<div class="lab-el"><div class="lab-sym">${e}</div>
+      <div class="lab-amt"><button type="button" data-i="${i}" data-d="-1" aria-label="less ${e}">−</button><input data-i="${i}" value="${+n.toFixed(3)}" aria-label="${e} amount"><button type="button" data-i="${i}" data-d="1" aria-label="more ${e}">+</button></div>
+      ${j.swaps[e]&&j.swaps[e].length?`<select data-i="${i}" aria-label="swap ${e}"><option value="">swap ${e} for…</option>${j.swaps[e].map(o=>`<option>${o}</option>`).join('')}</select>`:'<span class="muted" style="font-size:.78rem">lithium carrier</span>'}</div>`).join('');
+    const step=v=>v>=2?0.5:0.25;
+    ed.querySelectorAll('button[data-d]').forEach(b=>b.onclick=()=>{const i=+b.dataset.i;const cur=els[i][1];els[i][1]=Math.max(0,+(cur+(+b.dataset.d)*step(cur)).toFixed(3));f.value=build(els);query();});
+    ed.querySelectorAll('input[data-i]').forEach(inp=>inp.onchange=()=>{els[+inp.dataset.i][1]=Math.max(0,parseFloat(inp.value)||0);f.value=build(els);query();});
+    ed.querySelectorAll('select[data-i]').forEach(s=>s.onchange=()=>{if(!s.value)return;const i=+s.dataset.i;const ex=els.findIndex(x=>x[0]===s.value);if(ex>=0){els[ex][1]+=els[i][1];els.splice(i,1);}else els[i][0]=s.value;f.value=build(els);query();});
+  }
+  function addHist(j){
+    if(!hist.some(h=>h.formula===j.formula)) hist.push({formula:j.formula,pretty:j.pretty,ls:j.log10_sigma,txt:j.sigma_text,tier:j.tier,gain:j.gain,fe:j.feasibility,cif:j.cif_url});
+    hist.sort((a,b)=>b.ls-a.ls);
+    $('hist').innerHTML=hist.map((h,i)=>`<tr><td class="n muted">${i+1}</td><td><b>${h.pretty}</b></td><td class="num">${h.txt.replace(' S/cm','')}</td><td><span class="tag ${h.tier.tone}">${h.tier.name}</span></td><td><span class="tag badge-mini ${h.fe.tone}">${esc(h.fe.label)}</span></td><td>${h.gain?(h.gain>=1?'<span class="log-ok">'+h.gain.toFixed(2)+'×</span>':'<span class="log-bad">'+h.gain.toFixed(2)+'×</span>'):'baseline'}</td><td style="white-space:nowrap"><button class="btn sm ghost" data-f="${h.formula}">Load</button>${h.cif?` <a class="btn sm quiet" href="${h.cif}">CIF</a>`:''}</td></tr>`).join('');
+    $('hist').querySelectorAll('button[data-f]').forEach(b=>b.onclick=()=>{f.value=b.dataset.f;query();});
+  }
+  f.addEventListener('input',schedule); sg.addEventListener('input',schedule);
+  document.querySelectorAll('#presets .chip').forEach(c=>c.onclick=()=>{f.value=c.dataset.f;sg.value=c.dataset.g;base=c.dataset.f;$('baseName').textContent=base;query();});
+  $('setBase').onclick=()=>{if(last){base=last.formula;$('baseName').textContent=base;query();}};
+  $('resetBase').onclick=()=>{f.value=base;query();};
+  $('clearHist').onclick=()=>{hist=[];$('hist').innerHTML='<tr><td colspan="7" class="muted">No experiments yet.</td></tr>';};
+  query();
+})();
+</script>
+{% endblock %}

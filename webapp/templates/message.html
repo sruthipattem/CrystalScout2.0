@@ -1,0 +1,11 @@
+{% extends "base.html" %}
+{% from "_icons.html" import icon %}
+{% block title %}{{ title }}{% endblock %}
+{% block content %}
+<div class="panel reveal" style="max-width:620px;margin:40px auto;text-align:center;padding:40px">
+  <div class="use" style="--c:var(--brand);--c-soft:var(--brand-soft);padding:0"><div class="ic" style="margin:0 auto 14px">{{ icon('alert') }}</div></div>
+  <h1 style="font-size:1.6rem">{{ title|formula|safe }}</h1>
+  <p style="margin:10px auto">{{ text }}</p>
+  <div class="hero-actions" style="justify-content:center"><a class="btn" href="{{ url_for('overview') }}">{{ icon('home') }}Dashboard</a><a class="btn quiet" href="{{ url_for('shortlist') }}">Shortlist</a></div>
+</div>
+{% endblock %}

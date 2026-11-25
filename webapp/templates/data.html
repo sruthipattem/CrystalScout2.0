@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+{% block title %}Training data{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <h1>Training data</h1>
+    <p class="lede">OBELiX: synthesized Li solid electrolytes with experimentally measured room-temperature ionic conductivity (Therrien et al., 2025, CC BY 4.0). It replaces the base paper's 40 hand-compiled literature materials.</p>
+  </div>
+</div>
+<div class="stats">
+  <div class="stat"><b class="num">{{ n_all }}</b><span>entries with measured σ</span></div>
+  <div class="stat"><b class="num">{{ n_cif }}</b><span>have a crystal structure (CIF)</span></div>
+  <div class="stat"><b class="num">{{ n_used }}</b><span>usable for training after checks</span></div>
+  <div class="stat"><b class="num">{{ n_pos }}</b><span>superionic (≥ 10⁻⁴ S/cm), all entries</span></div>
+</div>
+
+<div class="grid g-side" style="margin-top:22px">
+  <div class="panel"><h2>Measured conductivity, all {{ n_all }} entries</h2><div style="margin-top:12px">{{ hist|safe }}</div>
+    <p class="foot-note">Blue bars are at or above the superionic threshold. "&lt;10⁻¹⁰" entries are placed at their upper bound.</p></div>
+  <div class="panel"><h2>Data caveats, handled explicitly</h2>
+    <div class="table-wrap" style="margin-top:12px"><table><tbody>
+      {% for k,v in flags.items() %}<tr><td class="wrap">{{ k }}</td><td class="n"><b>{{ v }}</b></td></tr>{% endfor %}
+    </tbody></table></div>
+    <p class="foot-note">The dataset authors randomly perturbed CIF coordinates slightly to respect ICSD licensing. Descriptors are averages over many bonds and stay stable under such noise. Disordered sites are handled as occupancy-weighted expectations rather than rounded away.</p></div>
+</div>
+
+<section class="grid g2">
+  <div class="panel"><h2>Crystal families in the training set</h2>
+    <div class="table-wrap" style="margin-top:12px;max-height:420px;overflow:auto"><table>
+      <thead><tr><th>Family</th><th class="n">Structures</th><th class="n">Superionic</th></tr></thead>
+      <tbody>{% for f in fam %}<tr><td>{{ f.family }}</td><td class="n">{{ f['count'] }}</td><td class="n">{{ f['sum'] }}</td></tr>{% endfor %}</tbody>
+    </table></div></div>
+  <div class="panel"><h2>Candidate pool</h2>
+    <p>The Materials Project snapshot holds <b class="num">{{ "{:,}".format(n_snap) }}</b> Li-containing entries with band gap, energy above hull, composition and space group (extracted 2026-07-20, CC BY 4.0, via the Scandium-Dataset compilation).</p>
+    <p>Crystal structures and descriptors are bundled for the <b class="num">{{ "{:,}".format(n_pool) }}</b> transition-metal-free entries with band gap ≥ 0.5 eV and E<sub>hull</sub> ≤ 0.1 eV/atom. That covers every threshold the offline screen accepts; the live mode downloads structures on demand.</p>
+  </div>
+</section>
+
+<section class="panel">
+  <div class="section-title"><h2>Every OBELiX structure with its descriptors</h2>
+    <form class="inline" method="get"><input type="text" name="q" value="{{ q }}" placeholder="Formula or family" aria-label="Filter by formula or family" style="margin:0;width:220px"><button class="btn quiet">Filter</button></form></div>
+  <div class="table-wrap" style="max-height:560px;overflow:auto"><table>
+    <thead><tr><th>ID</th><th>Formula</th><th>Family</th><th>Split</th><th class="n"><span style="text-transform:none">σ</span> (S/cm)</th>{% for k in FEATURES %}<th class="n">{{ k }}</th>{% endfor %}<th>Flags</th></tr></thead>
+    <tbody>{% for r in rows %}<tr>
+      <td class="muted">{{ r.ID }}</td><td>{{ r.formula|formula|safe }}</td><td>{{ r.family }}</td><td>{{ r.split }}</td><td class="n">{{ r.sigma|sci|safe }}</td>
+      {% for k in FEATURES %}<td class="n">{{ r[k]|f }}</td>{% endfor %}
+      <td>{% if r.excluded_reason %}<span class="tag warn">{{ r.excluded_reason }}</span>{% endif %}{% if r.close_match|string=='True' %} <span class="tag">close-match CIF</span>{% endif %}{% if r.li_mismatch|string=='True' %} <span class="tag">Li mismatch</span>{% endif %}{% if r.disordered|string=='True' %} <span class="tag">disordered</span>{% endif %}</td></tr>{% endfor %}</tbody>
+  </table></div>
+</section>
+{% endblock %}

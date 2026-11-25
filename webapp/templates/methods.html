@@ -1,0 +1,75 @@
+{% extends "base.html" %}
+{% block title %}Methods &amp; scope{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <h1>Methods and scope</h1>
+    <p class="lede">CrystalScout rebuilds the screening method of Sendek et al. (Energy Environ. Sci. 2017; Chem. Mater. 2019) as a re-runnable two-database pipeline, and replaces its weakest link, the 40-material training set, with OBELiX.</p>
+  </div>
+</div>
+
+<section class="panel">
+  <h2>The pipeline</h2>
+  <ol class="steps">
+    <li><b>Stage A, property filters.</b> Materials Project entries that contain Li, have a band gap above 1 eV, sit on the convex hull and contain no transition metals. Every failed rule is logged per material.</li>
+    <li><b>Shared feature extractor.</b> Each crystal structure, whether from the Materials Project, OBELiX or an upload, goes through the same code: CIF parsing, symmetry expansion, periodic neighbour search, and the five descriptors below.</li>
+    <li><b>Training labels from OBELiX.</b> Measured room-temperature conductivity ≥ 10<sup>−4</sup> S/cm marks a material superionic.</li>
+    <li><b>Ranking model.</b> Logistic regression, the base paper's model family, retrained on OBELiX and validated three ways. Random forest and gradient boosting run alongside for comparison.</li>
+    <li><b>Explained shortlist.</b> Every candidate gets an exact per-descriptor explanation, an applicability-domain check and, when available, the measured OBELiX conductivity of the same composition.</li>
+  </ol>
+</section>
+
+<section class="panel">
+  <h2>Descriptor definitions</h2>
+  <p>The papers define the descriptors in words. These are CrystalScout's exact operational definitions, applied identically to every structure.</p>
+  <div class="table-wrap" style="margin-top:12px"><table>
+    <thead><tr><th>Descriptor</th><th>Definition used</th></tr></thead>
+    <tbody>
+      <tr><td><b>LLB</b> Li–Li bond number</td><td class="wrap">Expected number of Li neighbours within 3.0 Å of each Li site, averaged over Li sites.</td></tr>
+      <tr><td><b>SBI</b> sublattice bond ionicity</td><td class="wrap">Mean Pauling ionicity 1 − exp(−Δχ²/4) of framework cation–anion bonds (first coordination shell: anions within 1.25× the shortest contact). Li binaries use Li–anion bonds.</td></tr>
+      <tr><td><b>AFC</b> anion framework coordination</td><td class="wrap">Mean number of anion neighbours of each anion inside the anion sublattice, counted to 1.12× the mean of its four shortest anion–anion contacts (bcc gives 8, fcc and hcp give 12).</td></tr>
+      <tr><td><b>LASD</b> Li–anion separation distance</td><td class="wrap">Mean Li–anion bond length over each Li site's first shell (within 1.25× its shortest Li–anion contact), in Å.</td></tr>
+      <tr><td><b>LLSD</b> Li–Li separation distance</td><td class="wrap">Mean distance from each Li site to its nearest Li neighbour, in Å.</td></tr>
+    </tbody>
+  </table></div>
+  <p class="foot-note">Anions: any of N, O, F, S, Cl, Se, Br, Te, I present; otherwise the most electronegative non-Li element (H in borohydrides, P in phosphides). Partially occupied sites contribute their occupancy to every count and average. Sites closer than 1.5 Å (1.6 Å for Li–Li) are alternative positions of one atom and are never counted as neighbours. Checked on ideal lattices: rock-salt LiCl gives AFC 12 and LASD = a/2; a bcc anion lattice gives AFC 8.</p>
+</section>
+
+<section class="grid g2">
+  <div class="panel">
+    <h2>In scope</h2>
+    <ul>
+      <li>Re-runnable Stage A against the live Materials Project API, plus a bundled snapshot</li>
+      <li>Full OBELiX integration with explicit caveat flags</li>
+      <li>CIF-based extractor for all five descriptors, with periodic boundaries and partial occupancy</li>
+      <li>Logistic-regression ranking model with a leakage-free held-out split and grouped cross-validation</li>
+      <li>Interpretability: exact per-descriptor contributions, applicability domain, descriptor explorer</li>
+      <li>Model comparison (random forest, gradient boosting) and an external DFT-MD benchmark</li>
+    </ul>
+  </div>
+  <div class="panel">
+    <h2>Out of scope, by design</h2>
+    <ul>
+      <li><b>Oxidation-potential filter (&gt; 4 V).</b> Needs grand-potential phase diagrams against all competing phases; future work.</li>
+      <li><b>New DFT-MD simulations.</b> The base paper's ground-truth step, beyond this phase's compute budget.</li>
+      <li><b>Synthesis and lab testing.</b></li>
+      <li><b>New ML architectures.</b> Logistic regression is kept for a fair comparison with the base paper and for interpretability.</li>
+    </ul>
+  </div>
+</section>
+
+<section class="panel">
+  <h2>How to read a score</h2>
+  <p>P(superionic) ranks materials for further study. It is not a measured or predicted conductivity, and rank 1 is not proof that a material is the best electrolyte. The right wording for a high-ranked material is "promising candidate"; DFT-MD and experiment remain the validation steps.</p>
+</section>
+
+<section class="panel">
+  <h2>References and data licences</h2>
+  <ul>
+    <li>A. D. Sendek et al., "Holistic computational structure screening of more than 12 000 candidates for solid lithium-ion conductor materials", <i>Energy Environ. Sci.</i> 10, 306–320 (2017).</li>
+    <li>A. D. Sendek et al., "Machine learning-assisted discovery of solid Li-ion conducting materials", <i>Chem. Mater.</i> 31, 342–352 (2019). DOI 10.1021/acs.chemmater.8b03272.</li>
+    <li>F. Therrien et al., "OBELiX: a curated dataset of crystal structures and experimentally measured ionic conductivities for lithium solid-state electrolytes", arXiv:2502.14234 (2025). Data CC BY 4.0, github.com/NRC-Mila/OBELiX.</li>
+    <li>A. Jain et al., "The Materials Project", <i>APL Materials</i> 1, 011002 (2013). Data CC BY 4.0. Offline snapshot via the Scandium-Dataset v1.0.0 compilation.</li>
+  </ul>
+</section>
+{% endblock %}

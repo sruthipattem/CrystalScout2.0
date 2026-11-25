@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% from "_icons.html" import icon %}
+{% block title %}Admin console{% endblock %}
+{% block content %}
+<div class="page-head"><div><p class="eyebrow">Administrator</p><h1>Admin console</h1><p class="lede">Accounts, roles and every sign-in attempt on this server.</p></div></div>
+<div class="kpis" style="margin-top:0">
+  <div class="kpi" style="--c:var(--good);--c-soft:var(--good-soft)"><div class="ic">{{ icon('check') }}</div><b data-count="{{ stats.ok }}">{{ stats.ok }}</b><span>successful sign-ins</span></div>
+  <div class="kpi" style="--c:var(--bad);--c-soft:var(--bad-soft)"><div class="ic">{{ icon('x') }}</div><b data-count="{{ stats.failed }}">{{ stats.failed }}</b><span>failed attempts</span></div>
+  <div class="kpi" style="--c:var(--teal);--c-soft:var(--teal-soft)"><div class="ic">{{ icon('shield') }}</div><b data-count="{{ stats.captcha }}">{{ stats.captcha }}</b><span>blocked by CAPTCHA</span></div>
+  <div class="kpi" style="--c:var(--amber);--c-soft:var(--amber-soft)"><div class="ic">{{ icon('lock') }}</div><b data-count="{{ stats.locked }}">{{ stats.locked }}</b><span>lockout hits</span></div>
+</div>
+<section class="panel reveal" style="margin-top:22px"><h2>Accounts</h2>
+  <div class="table-wrap" style="margin-top:12px"><table>
+    <thead><tr><th>Account</th><th>Role</th><th>Organisation</th><th>Live MP</th><th>Last sign-in</th><th>Password</th><th>Status</th></tr></thead>
+    <tbody>{% for u in users %}<tr>
+      <td><div class="acct"><span class="avatar">{{ u.initials }}</span><div><b>{{ u.full_name }}</b><small>@{{ u.username }}</small></div></div></td>
+      <td><span class="tag {{ u.role_color }}">{{ u.role_label }}</span></td><td class="muted">{{ u.org }}</td>
+      <td>{{ '✓' if u.can_live else '—' }}</td><td class="muted">{{ u.last_login or 'not since restart' }}</td>
+      <td><span class="tag good">configured</span></td>
+      <td>{% if u.locked %}<span class="tag bad">locked</span>{% else %}<span class="tag good">active</span>{% endif %}</td></tr>{% endfor %}</tbody></table></div>
+  <p class="foot-note">Passwords are never shown. Configure them with the <code>CRYSTALSCOUT_PW_&lt;USERNAME&gt;</code> environment variables before starting the app.</p></section>
+<section class="panel reveal"><h2>Sign-in audit log</h2><p class="muted">Most recent first (stored in <code>data/access_log.jsonl</code>).</p>
+  <div class="table-wrap" style="margin-top:12px;max-height:520px;overflow:auto"><table>
+    <thead><tr><th>Time</th><th>Event</th><th>Username</th><th>Result</th><th>Detail</th><th>Address</th></tr></thead>
+    <tbody>{% for e in events %}<tr><td class="muted">{{ e.time }}</td><td>{{ e.event }}</td><td><b>{{ e.username }}</b></td>
+      <td>{% if e.ok %}<span class="log-ok">✓ ok</span>{% else %}<span class="log-bad">✕ failed</span>{% endif %}</td><td>{{ e.detail }}</td><td class="muted">{{ e.ip }}</td></tr>
+    {% else %}<tr><td colspan="6" class="muted">No sign-in events yet.</td></tr>{% endfor %}</tbody></table></div></section>
+{% endblock %}

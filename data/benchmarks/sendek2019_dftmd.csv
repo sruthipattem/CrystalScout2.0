@@ -1,0 +1,41 @@
+material_id,formula,selection,rt_sigma_mScm,superionic_dftmd,marginal,source_note
+mp-554076,BaLiBS3,ML,<1e-6,0,0,Table 1
+mp-532413,Li5B7S13,ML,74,1,0,Table 1
+mp-569782,Sr2LiCBr3N2,ML,0.0033,0,1,Table 1
+mp-558219,SrLi(BS2)3,ML,<1e-6,0,0,Table 1
+mp-15797,LiErSe2,ML,8.8e-5,0,1,Table 1
+mp-29410,Li2B2S5,ML,9.7,1,0,Table 1
+mp-676361,Li3ErCl6,ML,3,1,0,Table 1
+mp-643069,Li2HIO,ML,~0.1,1,0,Table 1 (400 K only; extrapolated)
+mp-7744,LiSO3F,ML+random,0.082,1,0,Tables 1 and 2
+mp-34477,LiSmS2,ML,<1e-6,0,0,Table 1
+mp-676109,Li3InCl6,ML,6.4,1,0,Table 1 (literature value)
+mp-559238,CsLi2BS3,ML,~1,1,0,Table 1 (estimated from Li3BS3)
+mp-866665,LiMgB3(H9N)2,ML,7.9,1,0,Table 1
+mp-8751,RbLiS,ML,<1e-6,0,0,Table 1
+mp-15789,LiDyS2,ML,<1e-6,0,0,Table 1
+mp-15790,LiHoS2,ML,<1e-6,0,0,Table 1
+mp-15791,LiErS2,ML,<1e-6,0,0,Table 1
+mp-561095,LiHo2Ge2(O4F)2,ML,<1e-6,0,0,Table 1
+mp-8430,KLiS,ML,<1e-6,0,0,Table 1
+mp-22905,LiCl,ML,~1e-6,0,0,Table 1 (literature value)
+mp-6674,LiLa2SbO6,random,<1e-6,0,0,Table 2
+mp-8609,Li6UO6,random,<1e-6,0,0,Table 2
+mp-28567,LiBiF4,random,<1e-6,0,0,Table 2
+mp-12160,Li6Ho(BO3)3,random,5.1,1,0,Table 2
+mp-6787,RbLiB4O7,random,<1e-6,0,0,Table 2
+mp-560072,Li4Be3As3ClO12,random,<1e-6,0,0,Table 2
+mp-7941,Li6TeO6,random,<1e-6,0,0,Table 2
+mp-13772,Li3Pr2(BO3)3,random,<1e-6,0,0,Table 2
+mp-8452,NaLiS,random,<1e-6,0,0,Table 2
+mp-770932,LiSbO3,random,0.67,1,0,Table 2
+mp-12829,LiCaGaF6,random,<1e-6,0,0,Table 2
+mp-27811,Li2Te2O5,random,<1e-6,0,0,Table 2
+mp-8180,LiNO3,random,<1e-6,0,0,Table 2
+mp-7971,Ba4Li(SbO4)3,random,<1e-6,0,0,Table 2
+mp-8449,Rb2Li2SiO4,random,<1e-6,0,0,Table 2
+mp-558045,NaLi2PO4,random,<1e-6,0,0,Table 2
+mp-562394,Cs4Li2(Si2O5)3,random,<1e-6,0,0,Table 2
+mp-510073,RbLi(H2N)2,random,<1e-6,0,0,Table 2
+mp-989562,Cs2LiTlF6,random,<1e-6,0,0,Table 2
+mp-8892,LiInF4,random,<1e-6,0,0,Table 2

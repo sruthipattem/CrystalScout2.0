@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+{% from "_icons.html" import icon %}
+{% block title %}Developer API{% endblock %}
+{% block content %}
+<div class="page-head"><div>
+  <p class="eyebrow">Integrate</p>
+  <h1>Developer API</h1>
+  <p class="lede">The same models behind a FastAPI REST service with token sign-in, so CrystalScout can sit inside a DFT workflow, a LIMS or a lab notebook.</p>
+</div></div>
+{% if not has_fastapi %}<p class="note" style="margin-bottom:18px">FastAPI isn't installed on this machine yet. Run <code>pip install fastapi uvicorn python-multipart</code> once, then start the API with the command below.</p>{% endif %}
+<div class="grid g2">
+  <section class="panel reveal"><h2>Start the API</h2>
+    <pre><code>python -m uvicorn api.main:app --port 8000</code></pre>
+    <p>Then open <a href="http://{{ host }}:8000/docs" target="_blank" rel="noopener">http://{{ host }}:8000/docs</a> for interactive Swagger docs. Use any of the four CrystalScout accounts to sign in.</p>
+    <div class="timeline" style="margin-top:14px">
+      <div><b>Sign in</b><p><code>POST /auth/login</code> returns a bearer token (12 h).</p></div>
+      <div><b>Send the token</b><p><code>Authorization: Bearer &lt;token&gt;</code> on every call.</p></div>
+      <div><b>Score or screen</b><p>CIF upload, formula estimate, descriptors or a full screen.</p></div>
+    </div></section>
+  <section class="panel reveal d1"><h2>Endpoints</h2>
+    <div class="table-wrap" style="margin-top:10px"><table><tbody>
+      <tr><td><span class="tag good">GET</span></td><td><code>/health</code></td><td class="muted">status, no sign-in</td></tr>
+      <tr><td><span class="tag blue">POST</span></td><td><code>/auth/login</code></td><td class="muted">get a token</td></tr>
+      <tr><td><span class="tag good">GET</span></td><td><code>/auth/me</code></td><td class="muted">who am I, role</td></tr>
+      <tr><td><span class="tag good">GET</span></td><td><code>/models</code></td><td class="muted">all metrics</td></tr>
+      <tr><td><span class="tag blue">POST</span></td><td><code>/predict/cif</code></td><td class="muted">upload a CIF</td></tr>
+      <tr><td><span class="tag blue">POST</span></td><td><code>/predict/formula</code></td><td class="muted">σ from a formula</td></tr>
+      <tr><td><span class="tag blue">POST</span></td><td><code>/predict/descriptors</code></td><td class="muted">5 descriptors in</td></tr>
+      <tr><td><span class="tag blue">POST</span></td><td><code>/design/lab</code></td><td class="muted">Formula Lab</td></tr>
+      <tr><td><span class="tag blue">POST</span></td><td><code>/design/advise</code></td><td class="muted">Dopant Advisor</td></tr>
+      <tr><td><span class="tag blue">POST</span></td><td><code>/design/recipe</code></td><td class="muted">synthesis recipe</td></tr>
+      <tr><td><span class="tag blue">POST</span></td><td><code>/design/check</code></td><td class="muted">reality check: exists?, feasible?, structure, prediction</td></tr>
+      <tr><td><span class="tag blue">POST</span></td><td><code>/design/cif</code></td><td class="muted">CIF for any formula (real or generated)</td></tr>
+      <tr><td><span class="tag blue">POST</span></td><td><code>/screen</code></td><td class="muted">run a screen</td></tr>
+      <tr><td><span class="tag good">GET</span></td><td><code>/runs</code>, <code>/runs/{id}</code></td><td class="muted">saved runs</td></tr>
+    </tbody></table></div></section>
+</div>
+<section class="panel reveal"><h2>Python example</h2>
+<pre><code>import requests
+API = "http://{{ host }}:8000"
+tok = requests.post(f"{API}/auth/login", json={"username": "scientist", "password": "…"}).json()["access_token"]
+H = {"Authorization": f"Bearer {tok}"}
+
+print(requests.post(f"{API}/predict/formula", json={"formula": "Li6PS5Cl", "space_group": "F-43m"}, headers=H).json())
+with open("my_material.cif", "rb") as f:
+    print(requests.post(f"{API}/predict/cif", files={"file": f}, headers=H).json()["sigma"])
+top = requests.post(f"{API}/screen", json={"band_gap_min": 1.0, "rank_model": "crystalscout", "top": 10}, headers=H).json()
+best = requests.post(f"{API}/design/advise", json={"formula": "Li6PS5Cl", "space_group": "F-43m"}, headers=H).json()["best"]
+print(best["formula"], best["sigma_text"], requests.post(f"{API}/design/recipe", json={"formula": best["formula"], "batch_g": 5}, headers=H).json()["equation"])</code></pre>
+<p class="foot-note">A ready-to-run client is in <code>api/example_client.py</code>. Inside the web app there is also a lightweight JSON endpoint: <code>GET /api/estimate?formula=Li3InCl6</code> (uses your browser session).</p></section>
+{% endblock %}

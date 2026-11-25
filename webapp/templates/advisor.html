@@ -1,0 +1,132 @@
+{% extends "base.html" %}
+{% from "_icons.html" import icon %}
+{% block title %}Dopant Advisor{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <p class="eyebrow">Design · Innovation</p>
+    <h1>Dopant Advisor <span class="tag violet" style="vertical-align:middle">NEW</span></h1>
+    <p class="lede">Give it a lithium compound. It generates every sensible substitution, rejects the ones that fail charge or ion-size checks, separates compounds that already exist, builds a crystal structure for each new one, and hands you the best ready-to-make formula with its CIF and synthesis recipe.</p>
+  </div>
+</div>
+{% if error %}<p class="error" role="alert" style="margin-bottom:16px">{{ error }}</p>{% endif %}
+<form class="panel reveal" method="post" data-loading="Searching dopant variants…" data-steps="Assigning oxidation states|Generating charge-neutral dopings|Checking ion sizes|Looking up Materials Project and OBELiX|Building crystal structures|Scoring on the structure path|Ranking candidates">
+  <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+  <div class="fields" style="grid-template-columns:2fr 1fr auto">
+    <div class="field"><label for="af">Base component</label><input id="af" name="formula" type="text" value="{{ formula }}" placeholder="e.g. Li6PS5Cl or Li7La3Zr2O12" autocomplete="off" required style="font-size:1.1rem;font-weight:700"></div>
+    <div class="field"><label for="asg">Space group <small>optional</small></label><input id="asg" name="sg" type="text" value="{{ sg }}" placeholder="e.g. F-43m" autocomplete="off"></div>
+    <div class="field"><label>&nbsp;</label><button class="btn lg" type="submit">{{ icon('sparkle') }}Find the best dopant</button></div>
+  </div>
+  <div style="display:flex;gap:20px;flex-wrap:wrap;margin-top:14px">
+    <label class="check"><input type="checkbox" name="avoid_toxic" {% if opts.avoid_toxic %}checked{% endif %}> Avoid toxic dopants</label>
+    <label class="check"><input type="checkbox" name="avoid_supply_risk" {% if opts.avoid_supply_risk %}checked{% endif %}> Avoid supply-risk dopants (Ge, In, rare earths…)</label>
+    <label class="check"><input type="checkbox" name="allow_tm" {% if opts.allow_tm %}checked{% endif %}> Allow transition metals (e.g. Ta, Nb, Zr for oxides)</label>
+  </div>
+  <div class="chips" style="margin-top:14px">
+    {% for f, g in [("Li6PS5Cl","F-43m"),("Li7La3Zr2O12","Ia-3d"),("Li3PS4","Pnma"),("Li3InCl6","C2/m"),("Li10GeP2S12","P4_2/nmc")] %}
+    <button class="chip ex" type="button" data-f="{{ f }}" data-g="{{ g }}" style="cursor:pointer">{{ f }}</button>{% endfor %}
+  </div>
+</form>
+
+{% if res %}
+{% set ba = res.base_assessment %}
+<section class="panel reveal" style="margin-top:22px;padding:14px 18px">
+  <div style="display:flex;gap:14px;align-items:center;flex-wrap:wrap">
+    <span class="muted">Base</span><b style="font-size:1.15rem">{{ res.pretty|safe }}</b>
+    <span class="tag {{ ba.feasibility.tone }}">{{ ba.feasibility.label }}</span>
+    <span class="muted">predicted {{ res.base.sigma_text }}{% if ba.existence.sigma_max %} · measured {% if ba.existence.sigma_min and ba.existence.sigma_max/ba.existence.sigma_min > 1.5 %}{{ ba.existence.sigma_min|sci|safe }} – {{ ba.existence.sigma_max|sci|safe }}{% else %}{{ ba.existence.sigma_max|sci|safe }}{% endif %} S/cm (OBELiX){% endif %}</span>
+    <span class="muted">· crystal: {{ ba.host_id or 'none (composition only)' }}</span>
+  </div>
+  <div class="stats" style="margin-top:12px">
+    <div class="stat"><b>{{ res.n_variants }}</b><span>charge-neutral variants</span></div>
+    <div class="stat"><b>{{ res.rejected.size or 0 }}</b><span>rejected: ion size misfit</span></div>
+    <div class="stat"><b>{{ res.known|length }}</b><span>already known (benchmarks)</span></div>
+    <div class="stat"><b>{{ res.n_struct }}</b><span>new ones scored on a generated crystal</span></div>
+  </div>
+</section>
+
+<section class="grid g-side">
+  <div class="panel reveal" style="border:2px solid var(--good)">
+    <div class="panel-head"><span class="tag good">{{ icon('star') }} Best new candidate, ready to make</span><span class="tag {{ res.best.badge.tone }}">{{ res.best.badge.label }}</span></div>
+    <div style="display:flex;gap:22px;align-items:center;flex-wrap:wrap">
+      <div style="flex:1;min-width:260px">
+        <div class="s-formula" style="font-size:2.3rem">{{ res.best.pretty|safe }}</div>
+        <p class="muted" style="margin:0">{{ res.best.dopant }} on the {{ res.best.host }} site · {{ (res.best.fraction*100)|round(0)|int }} % substitution · {{ res.best.kind }} · size {{ res.best.fit.label }}{% if res.best.fit.mismatch is not none %} ({{ (res.best.fit.mismatch*100)|round(0)|int }} %){% endif %}</p>
+        <div class="stats" style="margin-top:16px">
+          <div class="stat"><b class="grad-text">{{ res.best.sigma_text.split(' S/cm')[0] }}</b><span>predicted σ (S/cm)</span></div>
+          <div class="stat"><b style="color:var(--good)">{{ res.best.gain|f }}×</b><span>vs base prediction</span></div>
+          {% if ba.existence.sigma_max %}{% set gm = (10 ** res.best.log10_sigma) / ba.existence.sigma_max %}
+          <div class="stat"><b style="color:{{ 'var(--good)' if gm >= 1 else 'var(--warn)' }}">{{ gm|f }}×</b><span>vs best measured base ({{ ba.existence.sigma_max|sci|safe }})</span></div>{% endif %}
+          <div class="stat"><b><span class="tag {{ res.best.confidence.tone }}">{{ res.best.confidence.level }}</span></b><span>confidence</span></div>
+        </div>
+        {% if ba.existence.sigma_max %}<p class="foot-note" style="margin-top:8px">Gain is model vs model (same crystal path). The base was also measured in the lab, so compare with the measured value too before claiming an improvement.</p>{% endif %}
+        <p class="honest" style="margin-top:10px">{{ icon('alert') }} {{ 'Scored on a generated crystal structure' if res.best.structure_scored else 'Scored from composition' }} · screening priority, not a measured conductivity.</p>
+      </div>
+      <div class="ring lg" style="--pct:{{ [res.best.gain/2*100, 100]|min|round(0) }};--ring-c:var(--good)"><div class="in"><b>{{ res.best.gain|f(1) }}×</b><small>gain</small></div></div>
+    </div>
+    <div class="hero-actions">
+      <a class="btn" href="{{ url_for('recipe', formula=res.best.formula, sg=sg, base=formula) }}">{{ icon('flask') }}Full synthesis recipe</a>
+      <a class="btn quiet" href="{{ cif(res.best.formula) }}">{{ icon('download') }}Download CIF</a>
+      <a class="btn quiet" href="{{ url_for('lab', formula=res.best.formula, sg=sg, base=formula) }}">{{ icon('sliders') }}Fine-tune in Formula Lab</a>
+    </div>
+  </div>
+  <div class="panel reveal d1">
+    <h2>Lab recipe preview</h2>
+    <p class="muted">5 g batch of {{ res.best.pretty|safe }}</p>
+    <div class="kv-list" style="margin-top:8px">
+      {% for r in recipe.rows %}<div><span>{{ r.pretty|safe }}</span><b class="num">{{ '%.3f'|format(r.grams) }} g</b></div>{% endfor %}
+    </div>
+    <p class="foot-note">{{ recipe.equation }}</p>
+    {% if recipe.moisture_sensitive %}<p class="note info" style="margin-top:10px">Moisture-sensitive: weigh and mix in an argon glovebox.</p>{% endif %}
+  </div>
+</section>
+
+<section class="panel reveal">
+  <div class="panel-head"><div><h2>New candidates (hypothetical)</h2><p class="muted" style="margin:2px 0 0">Not in Materials Project or OBELiX. Each one was built as a crystal on the base structure and scored through the structure path. Plausible ones rank first.</p></div></div>
+  <div class="table-wrap"><table>
+    <thead><tr><th class="n">#</th><th>Doped formula</th><th>Change</th><th>Feasibility · confidence</th><th class="n">Predicted <span style="text-transform:none">σ</span> (S/cm)</th><th>vs base (model)</th><th></th></tr></thead>
+    <tbody>
+    {% for s in res.suggestions %}
+      <tr {% if s.formula == res.best.formula %}style="background:#f3fcf8"{% endif %}>
+        <td class="n muted">{{ s.rank }}</td>
+        <td><a href="{{ url_for('lab', formula=s.formula, sg=sg, base=formula) }}" data-tip="Open in Formula Lab" style="color:var(--ink);text-decoration:none"><b>{{ s.pretty|safe }}</b></a>{% if s.flags.supply_risk %} <span class="flag sr" data-tip="Supply risk: {{ s.flags.supply_risk|join(' ') }}">$</span>{% endif %}{% if s.flags.toxic %} <span class="flag tx" data-tip="Toxic: {{ s.flags.toxic|join(' ') }}">☣</span>{% endif %}</td>
+        <td>{{ s.dopant }} → {{ s.host }}, {{ (s.fraction*100)|round(0)|int }} %<br><small class="muted">{{ s.kind }} · size {{ s.fit.label }}</small></td>
+        <td><span class="tag badge-mini {{ s.badge.tone }}" data-tip="{{ s.badge.reasons|join(' ') }}">{{ s.badge.label }}</span><br><small class="muted" data-tip="{{ s.confidence.notes|join(' ') }}">{{ s.confidence.level }} confidence</small></td>
+        <td class="n num" data-tip="80 % range {{ s.lo_text }} – {{ s.hi_text }}"><b>{{ s.sigma_text.split(' S/cm')[0] }}</b></td>
+        <td>{% if s.gain >= 1 %}<span class="log-ok">{{ s.gain|f }}×</span>{% else %}<span class="log-bad">{{ s.gain|f }}×</span>{% endif %}</td>
+        <td class="row-acts"><a href="{{ url_for('recipe', formula=s.formula, sg=sg, base=formula) }}" data-tip="Synthesis recipe">{{ icon('flask') }}</a><a href="{{ cif(s.formula) }}" data-tip="Download CIF">{{ icon('download') }}</a></td>
+      </tr>
+    {% endfor %}
+    </tbody></table></div>
+  <p class="foot-note">Hard filters before prediction: charge neutrality (aliovalent dopants change the Li content, e.g. Ga³⁺ for P⁵⁺ adds 2 Li⁺ per Ga) and Shannon ionic-radius fit (mismatch above 60 % is rejected). Generated crystals are unrelaxed starting models. Values rank candidates for the lab; confirm by synthesis, XRD and impedance.</p>
+</section>
+
+{% if res.known %}
+<section class="panel reveal">
+  <div class="panel-head"><div><h2>Already known in this doping space</h2><p class="muted" style="margin:2px 0 0">These variants exist in OBELiX or Materials Project. They are shown as benchmarks and never ranked against hypothetical compounds.</p></div></div>
+  <div class="table-wrap"><table>
+    <thead><tr><th>Formula</th><th>Change</th><th>Status</th><th class="n">Measured (S/cm)</th><th class="n">Model (S/cm)</th><th>Source</th></tr></thead>
+    <tbody>{% for k in res.known %}<tr>
+      <td><b>{{ k.pretty|safe }}</b></td><td>{{ k.dopant }} → {{ k.host }}, {{ (k.fraction*100)|round(0)|int }} %</td>
+      <td><span class="tag badge-mini {{ k.badge.tone }}">{{ k.badge.label }}</span></td>
+      <td class="n num">{{ k.measured|sci|safe if k.measured else '—' }}</td><td class="n num">{{ k.sigma_text.split(' S/cm')[0] }}</td>
+      <td class="muted">{% if k.obelix_id %}OBELiX {{ k.obelix_id }}{% endif %}{% if k.mp_id %}{{ ' · ' if k.obelix_id }}{{ k.mp_id }}{% if k.e_hull is not none %} (E<sub>hull</sub> {{ '%.3f'|format(k.e_hull) }}){% endif %}{% endif %}</td>
+    </tr>{% endfor %}</tbody></table></div>
+</section>
+{% endif %}
+
+<section class="grid g2">
+  <div class="panel reveal"><h2>New candidates at a glance</h2><p class="muted">Predicted conductivity on the generated crystals (mS/cm).</p><div style="margin-top:12px">{{ chart|safe }}</div></div>
+  <div class="panel reveal d1"><h2>How the advisor works</h2>
+    <div class="timeline" style="margin-top:12px">
+      <div><b>Read the chemistry</b><p>Oxidation states make the base neutral ({% for e, q in res.charges.items() if not e.startswith('_') %}{{ e }}{{ '+' if q > 0 }}{{ q }}{% if not loop.last %}, {% endif %}{% endfor %}).</p></div>
+      <div><b>Generate and filter</b><p>Same or neighbouring charge dopants at 10, 25 and 50 %; Li adjusts to stay neutral. Ion-size misfits and non-neutral variants are rejected.</p></div>
+      <div><b>Check existence</b><p>Every variant is looked up in Materials Project and OBELiX. Known ones become benchmarks.</p></div>
+      <div><b>Build crystals and score</b><p>New variants are built on the base's real crystal (site substitution, Vegard scaling), read back as CIFs and scored with real structure descriptors.</p></div>
+      <div><b>Rank and plan</b><p>Plausible candidates rank first; the best comes with a recipe and a CIF.</p></div>
+    </div>
+  </div>
+</section>
+{% endif %}
+{% endblock %}
+{% block scripts %}<script>document.querySelectorAll('.ex').forEach(b=>b.addEventListener('click',()=>{document.getElementById('af').value=b.dataset.f;document.getElementById('asg').value=b.dataset.g;if(b.dataset.f==='Li7La3Zr2O12')document.querySelector('[name=allow_tm]').checked=true;}));</script>{% endblock %}

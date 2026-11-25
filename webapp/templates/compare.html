@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% from "_icons.html" import icon %}
+{% block title %}Compare{% endblock %}
+{% block content %}
+<div class="page-head"><div>
+  <div class="crumb"><a href="{{ url_for('shortlist', run_id=run.run_id) }}">Candidate shortlist</a> / compare</div>
+  <h1>Side-by-side comparison</h1>
+  <p class="lede">{{ items|length }} candidates on the numbers a cell engineer needs to decide which to synthesise first.</p>
+</div></div>
+<section class="panel reveal"><h2>Predicted conductivity with 80 % ranges</h2><div style="margin-top:12px">{{ chart|safe }}</div>
+  <p class="foot-note">Dashed lines: 10⁻⁴ S/cm superionic threshold and 1 mS/cm cell-ready target.</p></section>
+<div class="table-wrap reveal" style="margin-top:22px"><table>
+  <thead><tr><th>Metric</th>{% for it in items %}<th><a href="{{ url_for('material', mp_id=it.material_id, run=run.run_id) }}" style="color:var(--ink);font-size:.9rem;text-transform:none;letter-spacing:0">{{ it.formula|formula|safe }}</a></th>{% endfor %}</tr></thead>
+  <tbody>
+    <tr><td>Verdict</td>{% for it in items %}<td><span class="tag {{ it.verdict.tone }}">{{ it.verdict.label }}</span></td>{% endfor %}</tr>
+    <tr><td>CrystalScout Score</td>{% for it in items %}<td><div class="ring" style="--pct:{{ (it.cs_score*100)|round(0) }}"><b>{{ (it.cs_score*100)|round(0)|int }}</b></div></td>{% endfor %}</tr>
+    <tr><td>Rank</td>{% for it in items %}<td>#{{ it['rank']|int }}</td>{% endfor %}</tr>
+    <tr><td>Predicted σ (S/cm)</td>{% for it in items %}<td class="num"><b>{{ it.log10_sigma_pred|slog|safe }}</b></td>{% endfor %}</tr>
+    <tr><td>Tier</td>{% for it in items %}<td><span class="tag {{ it.tier.tone }}">{{ it.tier.name }}</span></td>{% endfor %}</tr>
+    <tr><td>P(superionic), structure model</td>{% for it in items %}<td>{{ it.p_logreg|f }}</td>{% endfor %}</tr>
+    <tr><td>Models agreeing (of 3)</td>{% for it in items %}<td>{{ it.n_models_positive|int if it.n_models_positive is num else '—' }}</td>{% endfor %}</tr>
+    <tr><td>Band gap (eV)</td>{% for it in items %}<td>{{ it.band_gap|f }}</td>{% endfor %}</tr>
+    <tr><td>E above hull (eV/atom)</td>{% for it in items %}<td>{{ it.energy_above_hull|f(3) }}</td>{% endfor %}</tr>
+    <tr><td>Space group</td>{% for it in items %}<td>{{ it.space_group or '—' }}</td>{% endfor %}</tr>
+    <tr><td>Family</td>{% for it in items %}<td>{{ FAMILY_LABELS[it.family] }}</td>{% endfor %}</tr>
+    <tr><td>Supply risk</td>{% for it in items %}<td>{{ it.supply_risk or 'none' }}</td>{% endfor %}</tr>
+    <tr><td>Toxic elements</td>{% for it in items %}<td>{{ it.toxic or 'none' }}</td>{% endfor %}</tr>
+    <tr><td>Handling</td>{% for it in items %}<td>{{ 'dry room' if it.moisture_sensitive else 'ambient-stable class' }}</td>{% endfor %}</tr>
+    <tr><td>Lab-measured σ</td>{% for it in items %}<td>{% if it.obelix_sigma is num %}{{ it.obelix_sigma|sci|safe }}{% else %}<span class="muted">not measured</span>{% endif %}</td>{% endfor %}</tr>
+    {% for k in FEATURES %}<tr><td>{{ k }} <small class="muted">{{ FEATURE_INFO[k].name }}</small></td>{% for it in items %}<td class="num">{{ it[k]|f(3) }}</td>{% endfor %}</tr>{% endfor %}
+  </tbody></table></div>
+{% endblock %}

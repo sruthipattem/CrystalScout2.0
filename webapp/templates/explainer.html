@@ -1,0 +1,82 @@
+{% extends "base.html" %}
+{% block title %}Descriptor explorer{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <h1>Descriptor explorer</h1>
+    <p class="lede">Move the five structural descriptors and watch both equations respond. A teaching and sensitivity tool: the pipeline itself computes descriptors from real crystal structures.</p>
+  </div>
+</div>
+<div class="grid g-side">
+  <div class="panel">
+    <div class="section-title"><h2>Descriptors</h2><button class="btn quiet" type="button" id="reset">Reset to training average</button></div>
+    <p class="muted">Start from a real material:</p>
+    <div class="preset-row" id="presets" style="margin:8px 0 6px">
+      {% for p in presets %}<button class="btn quiet" type="button" data-i="{{ loop.index0 }}"><span>{{ p.name|formula|safe }}</span></button>{% endfor %}
+    </div>
+    <p id="presetNote" class="foot-note" aria-live="polite"></p>
+    <div id="sliders"></div>
+  </div>
+  <div style="display:grid;gap:22px;align-content:start">
+    <div class="panel" aria-live="polite">
+      <h2>Predicted likelihood</h2>
+      <p style="margin-top:12px"><b>CrystalScout, retrained on OBELiX</b> <span class="num" id="pOurs" style="float:right;font-weight:700;color:var(--brand)"></span></p>
+      <div class="gauge"><i id="gOurs"></i></div>
+      <p style="margin-top:14px"><b>Sendek 2019 published equation</b> <span class="num" id="pRef" style="float:right;font-weight:700"></span></p>
+      <div class="gauge ref"><i id="gRef"></i></div>
+      <p class="foot-note">Both are logistic regressions on the same five descriptors. They disagree because the published one was fit to 40 hand-picked literature materials and ours to {{ 'OBELiX' }}'s measured electrolytes.</p>
+    </div>
+    <div class="panel">
+      <h2>What moves the retrained score</h2>
+      <p class="muted">Log-odds push of each descriptor against the training average.</p>
+      <div id="contrib" style="margin-top:10px"></div>
+      <p class="foot-note"><span class="key sw" style="--c:var(--pos)"></span> raises P &nbsp; <span class="key sw" style="--c:var(--neg)"></span> lowers P</p>
+    </div>
+  </div>
+</div>
+<section class="panel">
+  <h2>The two equations</h2>
+  <p id="eqRef" class="num" style="font-size:.95rem"></p>
+  <p id="eqOurs" class="num" style="font-size:.95rem"></p>
+</section>
+{% endblock %}
+{% block scripts %}
+<script>
+const M = {{ model|safe }};
+const F = M.features;
+const x = {};
+function resetAvg(){ F.forEach((k,i)=>x[k]=M.mean[i]); }
+resetAvg();
+const host = document.getElementById('sliders');
+host.innerHTML = F.map((k,i)=>{
+  const [lo,hi]=M.ranges[k]; const step=(hi-lo)/200;
+  return `<div class="slider"><div><b>${k}</b><small>${M.info[k].name}${M.info[k].unit?' ('+M.info[k].unit+')':''}</small></div>
+    <input type="range" id="r_${k}" min="${lo}" max="${hi}" step="${step}" value="${x[k]}" aria-label="${M.info[k].name}">
+    <output id="o_${k}"></output></div>`;}).join('');
+F.forEach(k=>document.getElementById('r_'+k).addEventListener('input',e=>{x[k]=+e.target.value; document.getElementById('presetNote').textContent=''; update();}));
+const sig = z => 1/(1+Math.exp(-z));
+function update(){
+  let zo = M.intercept, zr = M.sendek_intercept; const terms=[];
+  F.forEach((k,i)=>{ const c = M.coef[i]*(x[k]-M.mean[i])/M.scale[i]; zo += c; terms.push([k,c]); zr += M.sendek[i]*x[k];
+    document.getElementById('o_'+k).textContent = x[k].toFixed(2); document.getElementById('r_'+k).value = x[k]; });
+  const po=sig(zo), pr=sig(zr);
+  document.getElementById('pOurs').textContent=po.toFixed(2); document.getElementById('gOurs').style.width=(po*100)+'%';
+  document.getElementById('pRef').textContent=pr.toFixed(2); document.getElementById('gRef').style.width=(pr*100)+'%';
+  const mx = Math.max(1, ...terms.map(t=>Math.abs(t[1])));
+  document.getElementById('contrib').innerHTML = terms.map(([k,c])=>{
+    const w = Math.abs(c)/mx*50, left = c>=0?50:50-w;
+    return `<div class="cbar"><b>${k}</b><span class="track"><i style="left:${left}%;width:${Math.max(w,.6)}%;background:${c>=0?'var(--pos)':'var(--neg)'}"></i></span><span class="num" style="text-align:right">${c>=0?'+':''}${c.toFixed(2)}</span></div>`;}).join('');
+}
+const raw = F.map((k,i)=>M.coef[i]/M.scale[i]);
+const b0 = M.intercept - F.reduce((s,k,i)=>s+M.coef[i]*M.mean[i]/M.scale[i],0);
+const fmt = (cs,b)=>F.map((k,i)=>`${i&&cs[i]>=0?'+ ':''}${cs[i]<0?'− ':''}${Math.abs(cs[i]).toFixed(2)}·${k}`).join(' ')+` ${b<0?'−':'+'} ${Math.abs(b).toFixed(2)}`;
+document.getElementById('eqRef').innerHTML = '<b>Sendek 2019:</b> log-odds = ' + fmt(M.sendek, M.sendek_intercept);
+document.getElementById('eqOurs').innerHTML = '<b>CrystalScout:</b> log-odds = ' + fmt(raw, b0);
+document.getElementById('reset').addEventListener('click',()=>{resetAvg(); document.getElementById('presetNote').textContent=''; update();});
+document.querySelectorAll('#presets button').forEach(btn=>btn.addEventListener('click',()=>{
+  const p=M.presets[+btn.dataset.i]; F.forEach(k=>x[k]=p[k]);
+  document.getElementById('presetNote').textContent = p.sigma ? `${p.name}: measured ${p.sigma.toExponential(1)} S/cm in OBELiX (${p.sigma>=1e-4?'superionic':'not superionic'}).` : `${p.name}: descriptors computed from its Materials Project structure; Sendek et al. predict it superionic by DFT-MD.`;
+  update();}));
+update();
+</script>
+{% endblock %}

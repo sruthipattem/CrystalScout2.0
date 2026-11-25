@@ -1,0 +1,95 @@
+{% extends "base.html" %}
+{% from "_icons.html" import icon %}
+{% block title %}Dashboard{% endblock %}
+{% block content %}
+<section class="hero reveal">
+  <div>
+    <p class="eyebrow">Good to see you, {{ current_user['full_name'] }}</p>
+    <h1><span class="big grad-text num" data-count="{{ summary.n_stage_a }}">{{ summary.n_stage_a }}</span>stable lithium compounds ranked for fast Li⁺ conduction, ready for your next cell.</h1>
+    <p class="lede">CrystalScout filters {{ "{:,}".format(summary.n_input) }} Materials Project crystals, predicts room-temperature ionic conductivity with the σ-Regressor, checks the structure with the Sendek descriptor model, and ranks everything by one CrystalScout Score.</p>
+    <div class="hero-actions">
+      <a class="btn lg" href="{{ url_for('shortlist') }}">{{ icon('list') }}Open the shortlist</a>
+      <a class="btn quiet lg" href="{{ url_for('screen') }}">{{ icon('filter') }}Run a custom screen</a>
+      <a class="btn ghost lg" href="{{ url_for('advisor') }}">{{ icon('sparkle') }}Dopant Advisor</a>
+    </div>
+    <div class="chips">
+      <span class="chip">{{ icon('db') }}OBELiX · {{ reg.protocol.n_total }} measured electrolytes</span>
+      <span class="chip">{{ icon('atom') }}Materials Project snapshot</span>
+      <span class="chip">{{ icon('shield') }}Validated on unseen materials</span>
+    </div>
+  </div>
+  <div>{{ funnel|safe }}
+    <p class="foot-note">Bar length is log-scaled. {{ "Live Materials Project" if summary.source=='live' else "Bundled Materials Project snapshot (2026-07-20)" }}.</p></div>
+</section>
+
+<div class="kpis">
+  <div class="kpi reveal d1" style="--c:var(--brand);--c-soft:var(--brand-soft)"><div class="ic">{{ icon('globe') }}</div><b class="num" data-count="{{ kpi.scanned }}">{{ kpi.scanned }}</b><span>Li compounds scanned</span></div>
+  <div class="kpi reveal d2" style="--c:var(--blue);--c-soft:var(--blue-soft)"><div class="ic">{{ icon('filter') }}</div><b class="num" data-count="{{ kpi.passed }}">{{ kpi.passed }}</b><span>passed stability &amp; band-gap filters</span></div>
+  <div class="kpi reveal d3" style="--c:var(--good);--c-soft:var(--good-soft)"><div class="ic">{{ icon('star') }}</div><b class="num" data-count="{{ kpi.strong }}">{{ kpi.strong }}</b><span>strong candidates (both models agree)</span></div>
+  <div class="kpi reveal d4" style="--c:var(--teal);--c-soft:var(--teal-soft)"><div class="ic">{{ icon('sparkle') }}</div><b class="num" data-count="{{ kpi.new }}">{{ kpi.new }}</b><span>of the top 50 never measured in the lab</span></div>
+</div>
+
+<section class="reveal" style="margin-top:28px">
+  <div class="section-title"><div><h2>Top candidates right now</h2><p class="muted" style="margin:2px 0 0">Ranked by CrystalScout Score. Click a card for the full report.</p></div>
+    <a href="{{ url_for('shortlist', run_id=run.run_id) }}">See all {{ summary.n_scored }} {{ icon('arrow') }}</a></div>
+  <div class="cards">
+  {% for r in top %}
+    {% set t = tier(r.log10_sigma_pred) %}
+    <a class="card" href="{{ url_for('material', mp_id=r.material_id, run=run.run_id) }}">
+      <span class="rank">#{{ r['rank'] }}</span>
+      <span class="tag violet"><span class="dot"></span>Top {{ [((r['rank'] / summary.n_scored) * 100)|round(0, 'ceil')|int, 1]|max }} %</span>
+      <div class="formula">{{ r.formula|formula|safe }}</div>
+      <div class="meta">{{ r.material_id }} · {{ FAMILY_LABELS[r.family] }}{% if r.band_gap is num %} · {{ r.band_gap|f(1) }} eV gap{% endif %}</div>
+      <div class="row">
+        <div class="ring" style="--pct:{{ (r.cs_score*100)|round(0) }}"><b>{{ (r.cs_score*100)|round(0)|int }}</b></div>
+        <div class="sig">Predicted σ<b>{{ r.log10_sigma_pred|slog|safe }} S/cm</b>{% if r.p_logreg is num %}P(superionic) {{ r.p_logreg|f }}{% else %}composition only{% endif %}</div>
+      </div>
+      <div class="tags">
+        {% if r.obelix_sigma is num %}<span class="tag good">Lab-measured</span>{% else %}<span class="tag violet">New candidate</span>{% endif %}
+        {% if r.supply_risk %}<span class="tag amber">Supply: {{ r.supply_risk }}</span>{% endif %}
+        {% if r.moisture_sensitive %}<span class="tag blue">Dry-room</span>{% endif %}
+      </div>
+      <span class="go">{{ icon('arrow') }}</span>
+    </a>
+  {% endfor %}
+  </div>
+</section>
+
+<div class="grid g-side">
+  <section class="panel reveal">
+    <div class="panel-head"><h2>How far to trust the ranking</h2><a class="btn sm ghost" href="{{ url_for('models') }}">Full validation</a></div>
+    <div class="trust">
+      <div><em><span style="text-transform:none">σ</span>-Regressor</em><b class="num">{{ reg.models.extra_trees.test.mae|f }}</b><span>mean error in log₁₀ σ on {{ reg.protocol.n_test }} unseen materials</span></div>
+      <div><em>Superionic detection</em><b class="num">{{ reg.models.extra_trees.test.superionic_auc|f }}</b><span>ROC-AUC on unseen OBELiX materials</span></div>
+      <div><em>Grouped CV</em><b class="num">{{ reg.models.extra_trees.cv.r2|f }}</b><span>R² across 5 formula-grouped folds</span></div>
+      <div><em>Structure model</em><b class="num">{{ bench.models.logreg.roc_auc|f }}</b><span>AUC against {{ bench.n }} DFT-MD verdicts</span></div>
+    </div>
+    {% if hits %}<p class="foot-note" style="margin-top:14px">Materials confirmed superionic by DFT-MD (Sendek 2019), which the models never saw, land at
+      {% for h in hits %}<a href="{{ url_for('material', mp_id=h.material_id, run=run.run_id) }}">{{ h.formula|formula|safe }} #{{ h['rank'] }}</a>{% if not loop.last %}, {% endif %}{% endfor %} of {{ summary.n_scored }}.</p>{% endif %}
+  </section>
+  <section class="panel reveal d1">
+    <h2>Chemistry mix of the top 50</h2>
+    <p class="muted">Which anion families lead the ranking.</p>
+    <div style="margin-top:12px">{{ fam_bars|safe }}</div>
+  </section>
+</div>
+
+<section class="reveal" style="margin-top:28px">
+  <div class="section-title"><div><h2>Design the next material</h2><p class="muted" style="margin:2px 0 0">Go beyond screening: every formula you design gets an existence check, a feasibility badge, its own crystal structure (CIF) and a lab recipe.</p></div></div>
+  <div class="design-band">
+    <a class="card use" href="{{ url_for('lab') }}" style="--c:var(--brand);--c-soft:var(--brand-soft)"><div class="ic">{{ icon('sliders') }}</div><h3>Formula Lab <span class="tag violet">NEW</span></h3><p>Change any element or amount: see instantly if it exists, if it is chemically sensible, its 3D crystal and its conductivity.</p><span class="go">{{ icon('arrow') }}</span></a>
+    <a class="card use" href="{{ url_for('advisor', formula='Li6PS5Cl', sg='F-43m') }}" style="--c:var(--good);--c-soft:var(--good-soft)"><div class="ic">{{ icon('sparkle') }}</div><h3>Dopant Advisor <span class="tag good">NEW</span></h3><p>Give a component; get the best new doped formula that passes charge and ion-size checks, scored on its generated crystal.</p><span class="go">{{ icon('arrow') }}</span></a>
+    <a class="card use" href="{{ url_for('recipe', formula='Li6PS5Cl0.5Br0.5', sg='F-43m') }}" style="--c:var(--amber);--c-soft:var(--amber-soft)"><div class="ic">{{ icon('flask') }}</div><h3>Synthesis Planner</h3><p>Precursors, molar ratio and grams for any batch size, ready to print for the lab.</p><span class="go">{{ icon('arrow') }}</span></a>
+  </div>
+</section>
+
+<section class="reveal" style="margin-top:28px">
+  <div class="section-title"><h2>Built for battery teams</h2></div>
+  <div class="grid g4">
+    <a class="card use" href="{{ url_for('screen') }}" style="--c:var(--brand);--c-soft:var(--brand-soft)"><div class="ic">{{ icon('battery') }}</div><h3>Cell R&amp;D</h3><p>Shortlist electrolytes ≥ 1 mS/cm for solid-state cells, with stability and band-gap filters.</p></a>
+    <a class="card use" href="{{ url_for('screen') }}#presets" style="--c:var(--amber);--c-soft:var(--amber-soft)"><div class="ic">{{ icon('factory') }}</div><h3>Supply-chain aware</h3><p>Cost-aware and low-toxicity presets drop Ge, In, rare earths, Pb and Cd before ranking.</p></a>
+    <a class="card use" href="{{ url_for('predict') }}" style="--c:var(--teal);--c-soft:var(--teal-soft)"><div class="ic">{{ icon('flask') }}</div><h3>Lab prioritisation</h3><p>Upload your own CIFs or formulas and get a ranked, explained list before synthesis.</p></a>
+    <a class="card use" href="{{ url_for('developers') }}" style="--c:var(--blue);--c-soft:var(--blue-soft)"><div class="ic">{{ icon('code') }}</div><h3>Pipeline integration</h3><p>REST API with token sign-in plugs CrystalScout into your DFT or LIMS workflows.</p></a>
+  </div>
+</section>
+{% endblock %}

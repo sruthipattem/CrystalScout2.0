@@ -1,0 +1,98 @@
+{% extends "base.html" %}
+{% from "_icons.html" import icon %}
+{% block title %}Score materials{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <p class="eyebrow">Bring your own candidates</p>
+    <h1>Score materials</h1>
+    <p class="lede">Upload crystal structures for the full analysis, type formulas for an instant conductivity estimate, or send descriptor tables from your own pipeline.</p>
+  </div>
+</div>
+{% if error %}<p class="error" role="alert" style="margin-bottom:16px">{{ error }}</p>{% endif %}
+<div class="panel reveal">
+  <div class="tabs" data-tabs data-initial="{{ tab }}" role="tablist">
+    <button type="button" data-tab="cif" role="tab">{{ icon('cube') }}Crystal files (CIF)</button>
+    <button type="button" data-tab="formula" role="tab">{{ icon('bolt') }}Formula quick estimate</button>
+    <button type="button" data-tab="csv" role="tab">{{ icon('db') }}Descriptor CSV</button>
+  </div>
+  <div class="tabpanel" id="tab-cif">
+    <form method="post" enctype="multipart/form-data" data-loading="Computing descriptors and predicting σ…" style="display:grid;gap:16px">
+      <input type="hidden" name="_csrf" value="{{ csrf_token() }}"><input type="hidden" name="kind" value="cif">
+      <label class="drop">{{ icon('upload') }}<b>Drop .cif files here or click to browse</b><span>Up to 50 files · 8 MB total · partial occupancies supported</span>
+        <input type="file" name="cifs" accept=".cif,text/plain" multiple><div class="files"></div></label>
+      <details><summary>…or paste CIF text</summary><textarea name="cif_text" placeholder="data_example&#10;_cell_length_a ..."></textarea></details>
+      <div><button class="btn" type="submit">{{ icon('sparkle') }}Score structures</button></div>
+    </form>
+  </div>
+  <div class="tabpanel" id="tab-formula" hidden>
+    <form method="post" data-loading="Predicting conductivity…" style="display:grid;gap:14px">
+      <input type="hidden" name="_csrf" value="{{ csrf_token() }}"><input type="hidden" name="kind" value="formula">
+      <div class="field"><label for="formulas">One formula per line <small>optionally followed by a space group, e.g. <code>Li3InCl6 C2/m</code></small></label>
+        <textarea id="formulas" name="formulas" style="min-height:140px" placeholder="Li6PS5Cl F-43m&#10;Li7La3Zr2O12&#10;Li3YCl6">{{ formula_text or '' }}</textarea></div>
+      <div><button class="btn" type="submit">{{ icon('bolt') }}Estimate conductivity</button></div>
+      <p class="foot-note">Composition-only estimates are faster but less certain than CIF scoring; adding the space group helps.</p>
+    </form>
+  </div>
+  <div class="tabpanel" id="tab-csv" hidden>
+    <form method="post" enctype="multipart/form-data" data-loading="Scoring table…" style="display:grid;gap:14px">
+      <input type="hidden" name="_csrf" value="{{ csrf_token() }}"><input type="hidden" name="kind" value="csv">
+      <label class="drop">{{ icon('db') }}<b>Drop a CSV with columns {{ FEATURES|join(', ') }}</b><span>Optional columns: formula, material_id</span>
+        <input type="file" name="csv" accept=".csv,text/csv"><div class="files"></div></label>
+      <div><button class="btn" type="submit">{{ icon('sparkle') }}Score table</button></div>
+    </form>
+  </div>
+</div>
+
+{% if results %}
+<section class="reveal">
+  <div class="section-title"><h2>Results · {{ results|length }} file{{ 's' if results|length != 1 }}</h2><a class="btn sm quiet" href="{{ url_for('predicted_csv', token=token) }}">{{ icon('download') }}Download CSV</a></div>
+  <div class="table-wrap"><table>
+    <thead><tr><th>File</th><th>Formula</th><th>CrystalScout Score</th><th class="n">Predicted <span style="text-transform:none">σ</span> (S/cm)</th><th>Tier</th><th>P(superionic)</th><th>Verdict</th><th></th></tr></thead>
+    <tbody>
+    {% for i, it in results %}
+      {% if it.ok %}
+      <tr><td class="muted">{{ it.name }}</td><td><a class="mat" href="{{ url_for('predicted', token=token, i=i) }}">{{ it.row.formula|formula|safe }}</a></td>
+        <td><span class="prob"><i style="--p:{{ (it.sigma.cs_score*100)|round(1) }}%"></i><b class="num">{{ (it.sigma.cs_score*100)|round(0)|int }}</b></span></td>
+        <td class="n num">{{ it.sigma.log10_sigma|slog|safe }}</td><td><span class="tag {{ it.sigma.tier.tone }}">{{ it.sigma.tier.name }}</span></td>
+        <td><span class="prob teal"><i style="--p:{{ (it.probs.logreg*100)|round(1) }}%"></i><span class="num">{{ it.probs.logreg|f }}</span></span></td>
+        <td><span class="tag {{ it.verdict.tone }}">{{ it.verdict.label }}</span></td>
+        <td><a class="btn sm ghost" href="{{ url_for('predicted', token=token, i=i) }}">Report</a></td></tr>
+      {% else %}
+      <tr><td class="muted">{{ it.name }}</td><td colspan="7"><span class="tag bad">Could not read</span> <span class="muted">{{ it.error }}</span></td></tr>
+      {% endif %}
+    {% endfor %}
+    </tbody></table></div>
+</section>
+{% endif %}
+
+{% if formula_rows or formula_errors %}
+<section class="reveal">
+  <div class="section-title"><h2>Quick estimates</h2></div>
+  {% for e in formula_errors %}<p class="error" style="margin-bottom:8px">{{ e }}</p>{% endfor %}
+  {% if formula_rows %}
+  <div class="table-wrap"><table>
+    <thead><tr><th>Formula</th><th>Family</th><th>CrystalScout Score</th><th class="n">Predicted <span style="text-transform:none">σ</span> (S/cm)</th><th>80 % range</th><th>Tier</th><th>Flags</th><th>Lab <span style="text-transform:none">σ</span> (OBELiX)</th></tr></thead>
+    <tbody>
+    {% for r in formula_rows %}
+      <tr><td><b>{{ r.formula|formula|safe }}</b>{% if r.space_group %} <small class="muted">{{ r.space_group }}</small>{% endif %}</td><td><span class="tag">{{ r.flags.family_label }}</span></td>
+        <td><span class="prob"><i style="--p:{{ (r.sigma.cs_score*100)|round(1) }}%"></i><b class="num">{{ (r.sigma.cs_score*100)|round(0)|int }}</b></span></td>
+        <td class="n num">{{ r.sigma.log10_sigma|slog|safe }}</td><td class="muted num">{{ r.sigma.log10_lo|slog|safe }} – {{ r.sigma.log10_hi|slog|safe }}</td>
+        <td><span class="tag {{ r.sigma.tier.tone }}">{{ r.sigma.tier.name }}</span></td>
+        <td>{% if r.flags.supply_risk %}<span class="tag amber">{{ r.flags.supply_risk|join(' ') }}</span>{% endif %}{% if r.flags.moisture_sensitive %} <span class="tag blue">dry-room</span>{% endif %}</td>
+        <td>{% if r.obelix %}<span class="tag good">{{ r.obelix.sigma|sci|safe }}</span>{% else %}<span class="muted">not measured</span>{% endif %}</td></tr>
+    {% endfor %}
+    </tbody></table></div>
+  {% endif %}
+</section>
+{% endif %}
+
+{% if csv_rows %}
+<section class="reveal">
+  <div class="section-title"><h2>Descriptor table · {{ csv_rows|length }} rows</h2><a class="btn sm quiet" href="{{ url_for('predicted_csv', token=token) }}">{{ icon('download') }}Download CSV</a></div>
+  <div class="table-wrap"><table><thead><tr><th>Formula</th>{% for k in MODEL_LABELS %}<th>{{ MODEL_LABELS[k] }}</th>{% endfor %}<th>Domain</th></tr></thead><tbody>
+  {% for r in csv_rows[:300] %}<tr><td><b>{{ r.formula|formula|safe }}</b></td>{% for k in MODEL_LABELS %}<td><span class="prob teal"><i style="--p:{{ (r['p_'+k]*100)|round(1) }}%"></i><span class="num">{{ r['p_'+k]|f }}</span></span></td>{% endfor %}<td>{% if r.in_domain|string=='True' %}<span class="tag good">in</span>{% else %}<span class="tag warn">check</span>{% endif %}</td></tr>{% endfor %}
+  </tbody></table></div>
+</section>
+{% endif %}
+{% endblock %}

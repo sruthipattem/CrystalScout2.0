@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% block title %}Screening{% endblock %}
+{% block content %}
+<div class="panel reveal" style="max-width:680px;margin:40px auto;text-align:center;padding:40px">
+  <div class="ring lg" id="ring" style="--pct:5;margin:0 auto 18px;animation:none"><div class="in"><b id="pct">0%</b><small>progress</small></div></div>
+  <h1 style="font-size:1.5rem"><span id="title">Screening {{ 'the live Materials Project' if job.source=='live' else 'the bundled snapshot' }}</span></h1>
+  <p id="stage" class="muted">Starting</p>
+  <div class="progress" aria-hidden="true" style="margin:18px 0"><i id="bar"></i></div>
+  <p id="err" class="error" style="display:none" role="alert"></p>
+  <p><a href="{{ url_for('screen') }}">Back to the screen settings</a></p>
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+const labels={download:'Downloading candidates from the Materials Project',features:'Computing the five structural descriptors',filter:'Applying filters, predicting σ and ranking',starting:'Starting'};
+async function poll(){
+  const r=await fetch('{{ url_for("job_api", job_id=job_id) }}'); const j=await r.json();
+  const ring=document.getElementById('ring');
+  if(j.status==='done'){ring.style.setProperty('--pct',100);document.getElementById('pct').textContent='100%';setTimeout(()=>location.href=j.url,350);return}
+  if(j.status==='error'){document.getElementById('title').textContent='The screen stopped';const e=document.getElementById('err');e.style.display='block';e.textContent=j.error;return}
+  const pct=j.total?Math.round(100*j.done/j.total):12;
+  document.getElementById('bar').style.width=Math.max(5,pct)+'%';ring.style.setProperty('--pct',Math.max(5,pct));document.getElementById('pct').textContent=Math.max(5,pct)+'%';
+  document.getElementById('stage').textContent=(labels[j.stage]||j.stage)+(j.total?` · ${j.done} of ${j.total}`:'');
+  setTimeout(poll,600);
+}
+poll();
+</script>
+{% endblock %}

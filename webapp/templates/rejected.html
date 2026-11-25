@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+{% block title %}Rejection log{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <div class="crumb"><a href="{{ url_for('shortlist', run_id=run.run_id) }}">Ranked shortlist</a> / rejection log</div>
+    <h1>Why materials were dropped</h1>
+    <p class="lede">Every rejected material lists all the Stage A rules it failed, not just the first one.</p>
+  </div>
+  <div class="actions"><a class="btn quiet" href="{{ url_for('run_rej_csv', run_id=run.run_id) }}">Download full log (CSV)</a></div>
+</div>
+<div class="grid g-side">
+  <div class="panel"><h2>Materials failing each rule</h2><div style="margin-top:12px">{{ bars|safe }}</div>
+    <p class="foot-note">A material can fail several rules, so the bars add up to more than the number rejected.</p></div>
+  <div class="panel">
+    <h2>Filter the log</h2>
+    <form class="inline" method="get" style="margin-top:12px">
+      <div class="field" style="min-width:220px"><label for="reason">Failed rule</label>
+        <select id="reason" name="reason"><option value="">Any</option>
+        {% for k in counts %}<option value="{{ k }}" {% if k==reason %}selected{% endif %}>{{ k }}</option>{% endfor %}</select></div>
+      <div class="field"><label for="q">Formula</label><input id="q" name="q" type="text" value="{{ q }}"></div>
+      <button class="btn quiet">Apply</button>
+    </form>
+    <p class="muted" style="margin-top:12px">{{ "{:,}".format(n) }} materials match{% if n > 300 %}; the first 300 are shown{% endif %}.</p>
+  </div>
+</div>
+<div class="table-wrap" style="margin-top:22px">
+<table>
+  <thead><tr><th>MP ID</th><th>Formula</th><th class="n">Band gap (eV)</th><th class="n">E_hull (eV/atom)</th><th>Rules failed</th></tr></thead>
+  <tbody>{% for r in rows %}<tr><td class="muted">{{ r.material_id }}</td><td>{{ r.formula|formula|safe }}</td><td class="n">{{ r.band_gap|f }}</td><td class="n">{{ r.energy_above_hull|f(3) }}</td><td class="wrap">{{ r.rejection_reasons }}</td></tr>{% endfor %}</tbody>
+</table>
+</div>
+{% endblock %}

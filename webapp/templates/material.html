@@ -1,0 +1,104 @@
+{% extends "base.html" %}
+{% from "_icons.html" import icon %}
+{% from "_sigma.html" import sigma_card %}
+{% block title %}{{ title }}{% endblock %}
+{% block content %}
+<div class="page-head mat-head">
+  <div>
+    <div class="crumb">{% if kind=='upload' %}<a href="{{ url_for('predict') }}">Score materials</a>{% else %}<a href="{{ url_for('shortlist', run_id=run_id) if run_id else url_for('shortlist') }}">Candidate shortlist</a>{% endif %} / {{ subtitle }}</div>
+    <h1>{{ title|formula|safe }}</h1>
+    <div class="chips" style="margin-top:10px">
+      {% if rank %}<span class="chip">{{ icon('star') }}Rank #{{ rank|int }} of {{ n_ranked }}</span>{% endif %}
+      <span class="chip">{{ icon('layers') }}{{ flags.family_label }}</span>
+      {% if row.get('space_group') %}<span class="chip">{{ icon('cube') }}{{ row.space_group }}</span>{% endif %}
+      {% if row.get('band_gap') is num %}<span class="chip">{{ icon('bolt') }}Gap {{ row.band_gap|f }} eV</span>{% endif %}
+      {% if row.get('energy_above_hull') is num %}<span class="chip">{{ icon('target') }}E<sub>hull</sub> {{ row.energy_above_hull|f(3) }} eV/atom</span>{% endif %}
+      {% if row.get('n_sites') is num %}<span class="chip">{{ icon('atom') }}{{ row.n_sites|int }} sites</span>{% endif %}
+    </div>
+  </div>
+  <div class="actions">
+    {% if cif_url %}<a class="btn quiet" href="{{ cif_url }}">{{ icon('download') }}CIF</a>{% endif %}
+    {% if mp_url %}<a class="btn quiet" href="{{ mp_url }}" target="_blank" rel="noopener">{{ icon('globe') }}Materials Project</a>{% endif %}
+    <a class="btn" href="{{ url_for('advisor', formula=row.formula, sg=row.get('space_group') or '') }}">{{ icon('sparkle') }}Suggest dopants</a>
+    <a class="btn quiet" href="{{ url_for('lab', formula=row.formula, sg=row.get('space_group') or '') }}">{{ icon('sliders') }}Formula Lab</a>
+    <a class="btn quiet" href="{{ url_for('recipe', formula=row.formula, sg=row.get('space_group') or '') }}">{{ icon('flask') }}Recipe</a>
+    <button class="btn ghost" type="button" onclick="window.print()">{{ icon('pdf') }}Print report</button>
+  </div>
+</div>
+
+<div class="verdict tone-{{ verdict.tone }} reveal" style="margin-bottom:22px">
+  <span class="ic">{{ icon('check' if verdict.tone=='good' else ('sparkle' if verdict.tone=='teal' else 'alert')) }}</span>
+  <div><b>{{ verdict.label }}</b><p>{{ verdict.action }}</p></div>
+  {% if sigma.cs_score is defined %}<div style="margin-left:auto;text-align:center"><div class="ring" style="--pct:{{ (sigma.cs_score*100)|round(0) }};--size:64px"><b>{{ (sigma.cs_score*100)|round(0)|int }}</b></div><small class="muted" style="font-weight:700;font-size:.68rem">CS SCORE</small></div>{% endif %}
+</div>
+
+<div class="grid g2">
+  <div class="reveal">
+    {% if viewer %}
+    <div class="viewer" id="viewer" aria-label="3D crystal structure; drag to rotate, scroll to zoom">
+      <canvas id="cv"></canvas><span class="vhint">Drag to rotate · scroll to zoom</span><div class="vlegend" id="vlegend"></div>
+    </div>
+    <p class="foot-note">One unit cell. Faded atoms are partially occupied sites.</p>
+    {% else %}
+    <div class="no-struct"><div>{{ icon('cube') }}<p><b>No crystal structure available offline</b><br>Conductivity is estimated from composition only. Run a live screen or upload a CIF to add the structure model.</p></div></div>
+    {% endif %}
+    <div class="panel" style="margin-top:22px">
+      <h2>Engineering notes</h2>
+      <div class="kv-list" style="margin-top:8px">
+        <div><span>Anion family</span><b>{{ flags.family_label }}</b></div>
+        <div><span>Handling</span><b>{{ 'Moisture-sensitive: dry room / Ar glovebox' if flags.moisture_sensitive else 'Standard handling (ambient-stable class)' }}</b></div>
+        <div><span>Supply-risk elements</span><b>{{ flags.supply_risk|join(', ') if flags.supply_risk else 'none' }}</b></div>
+        <div><span>Toxic elements</span><b>{{ flags.toxic|join(', ') if flags.toxic else 'none' }}</b></div>
+        {% if obelix %}<div><span>Lab measurement (OBELiX {{ obelix.ID }})</span><b>{{ obelix.sigma|sci|safe }} S/cm · <a href="https://doi.org/{{ obelix.doi }}" target="_blank" rel="noopener">source</a></b></div>{% endif %}
+      </div>
+    </div>
+  </div>
+  <div style="display:grid;gap:22px;align-content:start">
+    <div class="panel reveal d1">
+      <div class="panel-head"><h2>Predicted ionic conductivity</h2><span class="tag violet">σ-Regressor</span></div>
+      {{ sigma_card(sigma) }}
+      {% if sigma.cs_score is defined %}<p class="foot-note">CrystalScout Score {{ (sigma.cs_score*100)|round(0)|int }} / 100: beats {{ (sigma.cs_beats*100)|round(0)|int }} % of the {{ sigma.cs_n_ref }} candidates in the standard screen.</p>{% endif %}
+    </div>
+    <div class="panel reveal d2">
+      <div class="panel-head"><h2>Structure model</h2><span class="tag teal">Sendek descriptors</span></div>
+      {% if probs %}
+      <div class="bigprob"><b class="num">{{ probs.logreg|f }}</b><span class="muted">P(superionic), logistic regression</span></div>
+      <p>{{ why }}</p>
+      {% if not domain.in_domain %}<p class="note">Check this score: {{ domain.note }}.</p>
+      {% else %}<p><span class="tag good">Inside the training domain</span></p>{% endif %}
+      <div class="models-mini" style="margin-top:12px">
+        {% for k,v in probs.items() %}<div><span>{{ MODEL_LABELS[k] }}</span><span class="prob teal"><i style="--p:{{ (v*100)|round(1) }}%"></i></span><b class="num" style="text-align:right">{{ v|f }}</b></div>{% endfor %}
+      </div>
+      {% else %}
+      <p class="muted">Needs a crystal structure to compute the five descriptors (LLB, SBI, AFC, LASD, LLSD).</p>
+      {% endif %}
+    </div>
+  </div>
+</div>
+
+{% if probs %}
+<div class="grid g2">
+  <div class="panel reveal">
+    <h2>Why this score</h2>
+    <p class="muted">Each descriptor's push on the log-odds compared with the average training material. Exact for the logistic model; describes the model, not physical causes.</p>
+    <div style="margin-top:12px">{{ contrib_svg|safe }}</div>
+  </div>
+  <div class="panel reveal d1">
+    <h2>Descriptors against the training data</h2>
+    <p class="muted"><span class="key sw" style="--c:var(--pos)"></span> superionic in OBELiX · <span class="key sw" style="--c:var(--muted)"></span> not superionic · black line is this material.</p>
+    {% for k in FEATURES %}
+    <div class="feature-row">
+      <div><b>{{ k }} <span class="muted num" style="font-weight:500">{{ row[k]|f(3) }}{% if FEATURE_INFO[k].unit %} {{ FEATURE_INFO[k].unit }}{% endif %}</span></b><small>{{ FEATURE_INFO[k].name }}</small></div>
+      <div>{{ strips[k]|safe }}</div>
+    </div>
+    {% endfor %}
+  </div>
+</div>
+{% endif %}
+{% endblock %}
+{% block scripts %}
+{% if viewer %}
+<script>window.STRUCT = {{ viewer|safe }};</script>
+<script src="{{ url_for('static', filename='viewer.js') }}"></script>
+{% endif %}
+{% endblock %}

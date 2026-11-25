@@ -1,0 +1,106 @@
+<!doctype html>
+{% from "_icons.html" import icon %}
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{% block title %}CrystalScout{% endblock %} · CrystalScout</title>
+<meta name="description" content="CrystalScout: AI discovery platform for lithium solid-state electrolytes.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500&display=swap">
+<link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+<link rel="icon" href="{{ url_for('static', filename='logo.svg') }}" type="image/svg+xml">
+</head>
+<body>
+{% set active = request.endpoint %}
+<div class="shell">
+  <aside class="side" aria-label="Main navigation">
+    <a class="mark" href="{{ url_for('overview') }}">
+      <svg width="38" height="38" viewBox="0 0 32 32" aria-hidden="true"><defs><linearGradient id="lg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#6246ea"/><stop offset=".55" stop-color="#4f6bf5"/><stop offset="1" stop-color="#14b8a6"/></linearGradient></defs><path d="M16 1.5 29 9v14L16 30.5 3 23V9Z" fill="url(#lg)"/><path d="M16 1.5v29M3 9l26 14M29 9 3 23" stroke="#fff" stroke-width=".9" opacity=".35"/><circle cx="16" cy="16" r="4.6" fill="#fff"/><circle cx="16" cy="16" r="2" fill="#6246ea"/></svg>
+      <span><b>CrystalScout</b><small>Solid-electrolyte discovery</small></span>
+    </a>
+    <nav class="nav">
+      <a href="{{ url_for('overview') }}" {% if active=='overview' %}aria-current="page"{% endif %}>{{ icon('home') }}Dashboard</a>
+      <a href="{{ url_for('simple') }}" {% if active=='simple' %}aria-current="page"{% endif %}>{{ icon('bolt') }}Quick check<span class="badge">FAST</span></a>
+      <p>Discover</p>
+      <a href="{{ url_for('screen') }}" {% if active in ('screen','job') %}aria-current="page"{% endif %}>{{ icon('filter') }}Run a screen</a>
+      <a href="{{ url_for('shortlist') }}" {% if active in ('shortlist','rejected','material','compare') %}aria-current="page"{% endif %}>{{ icon('list') }}Candidate shortlist</a>
+      <a href="{{ url_for('predict') }}" {% if active in ('predict','predicted') %}aria-current="page"{% endif %}>{{ icon('upload') }}Score materials</a>
+      <p>Design</p>
+      <a href="{{ url_for('lab') }}" {% if active=='lab' %}aria-current="page"{% endif %}>{{ icon('sliders') }}Formula Lab<span class="badge">NEW</span></a>
+      <a href="{{ url_for('advisor') }}" {% if active=='advisor' %}aria-current="page"{% endif %}>{{ icon('sparkle') }}Dopant Advisor<span class="badge">NEW</span></a>
+      <a href="{{ url_for('recipe') }}" {% if active=='recipe' %}aria-current="page"{% endif %}>{{ icon('flask') }}Synthesis Planner</a>
+      <p>Understand</p>
+      <a href="{{ url_for('models') }}" {% if active=='models' %}aria-current="page"{% endif %}>{{ icon('chart') }}Model validation</a>
+      <a href="{{ url_for('explainer') }}" {% if active=='explainer' %}aria-current="page"{% endif %}>{{ icon('target') }}Descriptor lab</a>
+      <a href="{{ url_for('data') }}" {% if active=='data' %}aria-current="page"{% endif %}>{{ icon('db') }}Training data</a>
+      <a href="{{ url_for('methods') }}" {% if active=='methods' %}aria-current="page"{% endif %}>{{ icon('book') }}Methods &amp; scope</a>
+      <p>Platform</p>
+      <a href="{{ url_for('developers') }}" {% if active=='developers' %}aria-current="page"{% endif %}>{{ icon('code') }}Developer API</a>
+      {% if current_user and current_user['is_admin'] %}<a href="{{ url_for('auth.admin') }}" {% if active=='auth.admin' %}aria-current="page"{% endif %}>{{ icon('shield') }}Admin console</a>{% endif %}
+    </nav>
+    <div class="side-foot">
+      <div class="side-card"><b>CrystalScout</b>Screen, predict and design solid electrolytes. Every formula gets a reality check and its own crystal structure.</div>
+    </div>
+  </aside>
+  <main id="main">
+    <header class="topbar">
+      <button class="menu-toggle" id="menuToggle" type="button" aria-label="Open navigation">{{ icon('menu') }}</button>
+      <form class="quick" method="get" action="{{ url_for('predict') }}" role="search">
+        {{ icon('search') }}
+        <input id="quickInput" type="search" name="formula" placeholder="Quick estimate: type a formula, e.g. Li6PS5Cl" aria-label="Quick conductivity estimate from a formula" autocomplete="off">
+        <kbd>/</kbd>
+      </form>
+      <div class="spacer"></div>
+      <span class="status-pill"><i></i>Models online</span>
+      {% if current_user %}
+      <div class="user-menu">
+        <button class="user-btn" id="userBtn" type="button" aria-haspopup="true" aria-expanded="false">
+          <span class="avatar" aria-hidden="true">{{ current_user['initials'] }}</span>
+          <span><b>{{ current_user['full_name'] }}</b><small>{{ current_user['role_label'] }}</small></span>
+        </button>
+        <div class="menu" id="userMenu" role="menu">
+          <div class="head"><b>{{ current_user['full_name'] }}</b>@{{ current_user['username'] }} · {{ current_user['org'] }}</div>
+          <span class="tag {{ current_user['role_color'] }}" style="margin:0 12px 8px">{{ current_user['role_label'] }}</span>
+          <hr>
+          <a href="{{ url_for('auth.account') }}" role="menuitem">{{ icon('user') }}Account &amp; access</a>
+          {% if current_user['is_admin'] %}<a href="{{ url_for('auth.admin') }}" role="menuitem">{{ icon('shield') }}Admin console</a>{% endif %}
+          <a href="{{ url_for('developers') }}" role="menuitem">{{ icon('code') }}Developer API</a>
+          <hr>
+          <form method="post" action="{{ url_for('auth.logout') }}"><input type="hidden" name="_csrf" value="{{ csrf_token() }}"><button type="submit" role="menuitem">{{ icon('logout') }}Sign out</button></form>
+        </div>
+      </div>
+      {% endif %}
+    </header>
+    {% for cat, msg in get_flashed_messages(with_categories=true) %}<p class="flash {{ cat }}" role="status">{{ msg }}</p>{% endfor %}
+    {% block content %}{% endblock %}
+  </main>
+</div>
+<div class="loading-overlay" id="loading" aria-live="polite" role="status">
+  <div class="load-card">
+    <div class="load-art" aria-hidden="true">
+      <svg viewBox="0 0 120 120" class="load-crystal">
+        <defs><linearGradient id="lgA" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#8b5cf6"/><stop offset="1" stop-color="#14b8a6"/></linearGradient>
+          <linearGradient id="lgB" x1="1" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#c4b5fd"/><stop offset="1" stop-color="#5eead4"/></linearGradient></defs>
+        <polygon points="60,14 96,40 82,96 38,96 24,40" fill="url(#lgB)" opacity=".55"/>
+        <polygon points="60,14 96,40 60,58" fill="url(#lgA)" opacity=".9"/>
+        <polygon points="60,14 24,40 60,58" fill="url(#lgA)" opacity=".7"/>
+        <polygon points="24,40 60,58 38,96" fill="url(#lgA)" opacity=".5"/>
+        <polygon points="96,40 60,58 82,96" fill="url(#lgA)" opacity=".62"/>
+        <polygon points="60,58 38,96 82,96" fill="url(#lgA)" opacity=".38"/>
+      </svg>
+      <span class="load-orbit o1"><i></i></span><span class="load-orbit o2"><i></i></span><span class="load-orbit o3"><i></i></span>
+    </div>
+    <div class="load-text">
+      <b class="load-title" id="loadTitle">Working…</b>
+      <ol class="load-steps" id="loadSteps"></ol>
+      <div class="load-bar"><i></i></div>
+      <span class="load-hint">CrystalScout · every result comes with its feasibility check</span>
+    </div>
+  </div>
+</div>
+<script src="{{ url_for('static', filename='app.js') }}"></script>
+{% block scripts %}{% endblock %}
+</body>
+</html>
